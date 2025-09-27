@@ -20,6 +20,16 @@ public class ExcelService {
             CellStyle headerStyle = createHeaderStyle(workbook);
             CellStyle centerStyle = createCenterStyle(workbook);
 
+            criarCabecalho(sheet, headerStyle);
+            preencherDados(sheet, dados, centerStyle);
+
+            for (int i = 0; i < 4; i++){
+                sheet.autoSizeColumn(i);
+            }
+
+            try (FileOutputStream fileOut = new FileOutputStream(nomeArquivo)) {
+                workbook.write(fileOut);
+            }
         }
     }
     private void criarCabecalho(Sheet sheet, CellStyle headerStyle) {
