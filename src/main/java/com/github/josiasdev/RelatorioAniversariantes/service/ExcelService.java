@@ -32,6 +32,20 @@ public class ExcelService {
         }
     }
 
+    private void preencherDados(Sheet sheet, List<AniversarianteDTO> dados, CellStyle centerStyle){
+        int rowNum = 1;
+        for (AniversarianteDTO aniv: dados){
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(aniv.getDia());
+            row.createCell(1).setCellValue(aniv.getNome());
+            row.createCell(2).setCellValue(aniv.getIdade());
+            row.createCell(3).setCellValue(aniv.getCongregacao());
+
+            row.getCell(0).setCellStyle(centerStyle);
+            row.getCell(2).setCellStyle(centerStyle);
+        }
+    }
+
 
 
 }
