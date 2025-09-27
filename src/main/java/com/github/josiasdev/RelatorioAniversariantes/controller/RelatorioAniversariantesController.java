@@ -20,12 +20,12 @@ public class RelatorioAniversariantesController {
     @GetMapping("/gerarAniversariantes")
     public ResponseEntity<String> gerarRelatorio(){
         try {
-            String nomeArquivo = relatorioAniversariantesService.gerarRelatorioAniversariantes();
-            return ResponseEntity.ok("Relatório gerado com sucesso: " + nomeArquivo);
+            relatorioAniversariantesService.gerarRelatorioAniversariantes();
+            return ResponseEntity.accepted().body("Requisição recebida. O relatório está sendo gerado em segundo plano.");
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao gerar o relatório: " + e.getMessage());
+                    .body("Erro ao iniciar a geração do relatório: " + e.getMessage());
         }
     }
 }
