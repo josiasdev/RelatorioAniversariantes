@@ -2,6 +2,7 @@ package com.github.josiasdev.RelatorioAniversariantes.service;
 
 import com.github.josiasdev.RelatorioAniversariantes.dto.AniversarianteDTO;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 
 import java.io.IOException;
 import java.time.DayOfWeek;
@@ -19,7 +20,9 @@ public class RelatorioAniversariantesService {
         this.webScraperService = webScraperService;
         this.excelService = excelService;
     }
-    public String gerarRelatorioAniversariantes() throws IOException, InterruptedException {
+
+    @Async
+    public void gerarRelatorioAniversariantes() throws IOException, InterruptedException {
         LocalDate today =  LocalDate.now();
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
@@ -30,13 +33,12 @@ public class RelatorioAniversariantesService {
 
         if (aniversariantes == null || aniversariantes.isEmpty()) {
             System.out.println("Nenhum aniversariante encontrado para o período.");
-            return "Nenhum dado encontrado para gerar o relatório.";
+            return;
         }
         System.out.println(aniversariantes.size() + " aniversariantes encontrados. Gerando planilha...");
         String filename = "aniversariantes_membros_semana_" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + ".xlsx";
         excelService.gerarPlanilha(filename, aniversariantes);
-
-        return filename;
+        System.out.println("Relatório " + filename + " gerado com sucesso em background.");
     }
 
 }
