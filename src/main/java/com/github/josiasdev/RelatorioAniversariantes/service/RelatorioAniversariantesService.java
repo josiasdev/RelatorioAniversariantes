@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
+import java.time.temporal.TemporalAdjuster;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,5 +49,19 @@ public class RelatorioAniversariantesService {
         options.addArguments("--disable-gpu");
         options.addArguments("--window-size=1280,720");
 
+        WebDriver driver = new ChromeDriver(options);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(100));
+
+        try {
+            LocalDate today = LocalDate.now();
+            LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+            int startDay = startOfWeek.getDayOfMonth();
+            int endDay = endOfWeek.getDayOfMonth();
+            String monthNamePt = startOfWeek.getMonth().getDisplayName(TextStyle.FULL, new Locale("pt", "BR"));
+
+            System.out.println("Buscando aniversariantes para o mês de: " + monthNamePt);
+            System.out.println("Período da semana: de " + startDay + " a " + endDay);
+        }
     }
 }
