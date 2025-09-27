@@ -44,8 +44,23 @@ public class ExcelService {
             row.getCell(0).setCellStyle(centerStyle);
             row.getCell(2).setCellStyle(centerStyle);
         }
+
+
     }
+    private CellStyle createHeaderStyle(Workbook workbook){
+        CellStyle style = workbook.createCellStyle();
+        style.setFillBackgroundColor(IndexedColors.GREEN.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-
-
+        Font font = workbook.createFont();
+        font.setColor(IndexedColors.WHITE.getIndex());
+        font.setBold(true);
+        style.setFont(font);
+        return style;
+    }
+    private CellStyle createCenterStyle(Workbook workbook){
+        CellStyle style = workbook.createCellStyle();
+        style.setAlignment(HorizontalAlignment.CENTER);
+        return style;
+    }
 }
