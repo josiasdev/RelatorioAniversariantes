@@ -94,4 +94,25 @@ public class WebScraperService {
         new Select(driver.findElement(By.id("id_sc_field_situacao"))).selectByVisibleText("Ativo");
         wait.until(ExpectedConditions.elementToBeClickable(By.id("sub_form_b"))).click();
     }
+    private List<AniversarianteDTO> extrairDadosDaTabela(WebDriver driver) throws InterruptedException {
+        System.out.println("Extraindo dados da tabela...");
+        TimeUnit.SECONDS.sleep(3);
+        List<WebElement> linhas = driver.findElements(By.xpath("//tr[@class='scGridFieldOdd' or @class='scGridFieldEven']"));
+        return linhas.stream()
+                .map(linha -> {
+                    List<WebElement> celulas = linha.findElements(By.tagName("td"));
+                    if (celulas.size() > 5) {
+                        return new AniversarianteDTO(
+                                celulas.get(1).getText(),
+                                celulas.get(2).getText(),
+                                celulas.get(3).getText(),
+                                celulas.get(5).getText()
+                        );
+                    }
+                    return null;
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+    }
 }
