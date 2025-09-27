@@ -41,5 +41,12 @@ public class RelatorioAniversariantesService {
     @Value("${app.credentials.password}")
     private String password;
 
+    public String gerarRelatorioAniversariantes() throws IOException, InterruptedException {
+        WebDriverManager.chromedriver().setup();
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless");
+        options.addArguments("--disable-gpu");
+        options.addArguments("--window-size=1280,720");
 
+    }
 }
