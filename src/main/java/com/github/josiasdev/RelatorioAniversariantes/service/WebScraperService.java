@@ -3,6 +3,7 @@ package com.github.josiasdev.RelatorioAniversariantes.service;
 import com.github.josiasdev.RelatorioAniversariantes.dto.AniversarianteDTO;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
+import net.bytebuddy.asm.Advice;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -59,4 +60,38 @@ public class WebScraperService {
         driver.findElement(By.xpath("//button[contains(text(), 'Entrar')]")).click();
     }
 
+    private void navegarParaFormularioDeAniversariantes(WebDriver driver, WebDriverWait wait) throws InterruptedException{
+        System.out.println("Navegando para o formulário de relatórios...");
+        wait.until(ExpectedConditions.elementToBeClickable(By.id("modulo_nome"))).click();
+        TimeUnit.SECONDS.sleep(2);
+        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//a[@href='../blkSiteMap/blkSiteMap.php?glo_modulo=Secretaria']"))).click();
+
+        System.out.println("Entrando no iframe e selecionando o relatório...");
+        wait.until(ExpectedConditions.frameToBeAvailableAndSwitchToIt(By.name("mnuMainXI_13_iframe")));
+        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//a[normalize-space(text())='Relatórios']"))).click();
+        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//a[@href='../ctrtipoaniversario/ctrtipoaniversario.php']"))).click();
+    }
+
+    private void preencherEBuscar(WebDriver driver, WebDriverWait wait, LocalDate startOfWeek, LocalDate endOfWeek)  throws InterruptedException {
+        System.out.println("Preenchendo o formulário de busca...");
+        new Select(wait.until(ExpectedConditions.presenceOfElementLocated(By.id("id_sc_field_tipo")))).selectByValue("1");
+        wait.until(ExpectedConditions.elementToBeClickable(By.id("sc_OK_bot"))).click();
+
+        Select selectRegional = new Select(driver.findElement(By.id("id_sc_field_setor")));
+        for (WebElement option : selectRegional.getOptions()) {
+            selectRegional.selectByValue(option.getAttribute("value"));
+        }
+        TimeUnit.SECONDS.sleep(10);
+        Select selectCongregacao = new Select(driver.findElement(By.id("id_sc_field_congregacao")));
+        for (WebElement option : selectCongregacao.getOptions()) {
+            selectCongregacao.selectByValue(option.getAttribute("value"));
+        }
+
+        String monthNamePt = startOfWeek.getMonth().getDisplayName(TextStyle.FULL, new Locale("pt", "BR"));
+        driver.findElement(By.id("id_sc_field_dia1")).sendKeys(String.valueOf(startOfWeek.getDayOfMonth()));
+        driver.findElement(By.id("id_sc_field_dia2")).sendKeys(String.valueOf(endOfWeek.getDayOfMonth()));
+        new Select(driver.findElement(By.id("id_sc_field_mes"))).selectByVisibleText(monthNamePt.substring(0, 1).toUpperCase() + monthNamePt.substring(1));
+        new Select(driver.findElement(By.id("id_sc_field_situacao"))).selectByVisibleText("Ativo");
+        wait.until(ExpectedConditions.elementToBeClickable(By.id("sub_form_b"))).click();
+    }
 }
