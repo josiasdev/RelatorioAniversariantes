@@ -72,6 +72,19 @@ public class RelatorioAniversariantesService {
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("username"))).sendKeys(username);
             driver.findElement(By.id("password")).sendKeys(password);
             driver.findElement(By.xpath("//button[contains(text(), 'Entrar')]")).click();
+
+            // Navegação
+            System.out.println("Navegando para relatórios...");
+            wait.until(ExpectedConditions.elementToBeClickable(By.id("modulo_nome"))).click();
+            TimeUnit.SECONDS.sleep(2);
+            wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//a[@href='../blkSiteMap/blkSiteMap.php?glo_modulo=Secretaria']"))).click();
+
+            // Interagindo dentro do iframe
+            System.out.println("Mudando para o iframe...");
+            wait.until(ExpectedConditions.frameToBeAvailableAndSwitchToIt(By.name("mnuMainXI_13_iframe")));
+            wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//a[normalize-space(text())='Relatórios']"))).click();
+            wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//a[@href='../ctrtipoaniversario/ctrtipoaniversario.php']"))).click();
+
         }
     }
 }
