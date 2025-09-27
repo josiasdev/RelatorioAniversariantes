@@ -45,8 +45,14 @@ public class WebScraperService {
         WebDriver driver = new ChromeDriver(options);
         try{
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(100));
+            realizarLogin(driver, wait);
+            navegarParaFormularioDeAniversariantes(driver, wait);
+            preencherEBuscar(driver, wait, startOfWeek, endOfWeek);
 
-
+            return extrairDadosDaTabela(driver);
+        } finally {
+            System.out.println("Fechando o navegador...");
+            driver.quit();
         }
     }
 
@@ -113,6 +119,5 @@ public class WebScraperService {
                 })
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
-    }
     }
 }
