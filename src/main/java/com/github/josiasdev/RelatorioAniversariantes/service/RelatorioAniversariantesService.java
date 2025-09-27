@@ -62,6 +62,16 @@ public class RelatorioAniversariantesService {
 
             System.out.println("Buscando aniversariantes para o mês de: " + monthNamePt);
             System.out.println("Período da semana: de " + startDay + " a " + endDay);
+
+
+            // Login
+            System.out.println("Acessando a página de login...");
+            driver.get("https://church15.churchsoftware.com.br/frmlogin/");
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.id("codcliente"))).sendKeys(clientCode);
+            wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[contains(text(), 'Próximo')]"))).click();
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("username"))).sendKeys(username);
+            driver.findElement(By.id("password")).sendKeys(password);
+            driver.findElement(By.xpath("//button[contains(text(), 'Entrar')]")).click();
         }
     }
 }
