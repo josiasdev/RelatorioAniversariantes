@@ -38,7 +38,6 @@ public class WebScraperService {
     public List<AniversarianteDTO> extrairAniversariantesDaSemana(LocalDate startOfWeek, LocalDate endOfWeek) throws InterruptedException {
         WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
         options.addArguments("--disable-gpu");
         options.addArguments("--window-size=800,600");
 
