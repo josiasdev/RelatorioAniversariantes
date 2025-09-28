@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping("/relatorios")
 @Tag(name = "Relatórios", description = "Endpoints para geração de relatórios automatizados")
@@ -38,14 +40,8 @@ public class RelatorioAniversariantesController {
                     description = "Ocorreu um erro interno ao tentar iniciar o processo de geração do relatório."
             )
     })
-    public ResponseEntity<String> gerarRelatorio(){
-        try {
+    public ResponseEntity<String> gerarRelatorio() throws IOException, InterruptedException {
             relatorioAniversariantesService.gerarRelatorioAniversariantes();
             return ResponseEntity.accepted().body("Requisição recebida. O relatório está sendo gerado em segundo plano.");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao iniciar a geração do relatório: " + e.getMessage());
-        }
     }
 }
