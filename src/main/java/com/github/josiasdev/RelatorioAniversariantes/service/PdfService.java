@@ -72,7 +72,7 @@ public class PdfService {
 
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{1f, 5f, 1.5f, 4f}); // Proporção das colunas
+        table.setWidths(new float[]{1f, 5f, 1.5f, 4f});
 
         adicionarCabecalhoTabela(table, "DIA", "NOME", "IDADE", "CONGREGAÇÃO");
 
@@ -85,7 +85,7 @@ public class PdfService {
         }
 
         document.add(table);
-        document.add(new Paragraph("\n")); // Espaço extra após a tabela
+        document.add(new Paragraph("\n"));
     }
 
     private void adicionarTabelaCasamentos(Document document, String titulo, List<CasamentoDTO> lista) throws DocumentException {
@@ -115,7 +115,7 @@ public class PdfService {
         Font fontCabecalho = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         for (String coluna : colunas) {
             PdfPCell cell = new PdfPCell(new Phrase(coluna, fontCabecalho));
-            cell.setBackgroundColor(new Color(0, 102, 204)); // Azul padrão
+            cell.setBackgroundColor(new Color(0, 102, 204));
             cell.setHorizontalAlignment(Element.ALIGN_CENTER);
             cell.setPadding(5);
             table.addCell(cell);
