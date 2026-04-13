@@ -1,44 +1,85 @@
 package com.github.josiasdev.RelatorioAniversariantes.service;
 
-import com.github.josiasdev.RelatorioAniversariantes.dto.AniversarianteDTO;
-import org.springframework.stereotype.Service;
+import com.github.josiasdev.RelatorioAniversariantes.dto.CasamentoDTO;
+import com.github.josiasdev.RelatorioAniversariantes.dto.DadosRelatorioDTO;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class RelatorioAniversariantesService {
-    private final WebScraperService webScraperService;
-    private final ExcelService excelService;
 
-    public RelatorioAniversariantesService(WebScraperService webScraperService, ExcelService excelService) {
+    private final WebScraperService webScraperService;
+    private final PdfService pdfService; // <-- Trocamos ExcelService por PdfService
+
+    public RelatorioAniversariantesService(WebScraperService webScraperService, PdfService pdfService) {
         this.webScraperService = webScraperService;
-        this.excelService = excelService;
+        this.pdfService = pdfService;
     }
 
     @Async
-    public void gerarRelatorioAniversariantes() throws IOException, InterruptedException {
-        LocalDate today =  LocalDate.now();
-        LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+    public void gerarRelatorioAniversariantes() {
+        try {
+            LocalDate today = LocalDate.now();
+            LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+            String dataFormatada = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
 
-        System.out.println("Iniciando processo de geração de relatório para a semana de " + startOfWeek + " a " + endOfWeek);
+            System.out.println("Iniciando extração geral...");
 
-        List<AniversarianteDTO> aniversariantes = webScraperService.extrairAniversariantesDaSemana(startOfWeek, endOfWeek);
+            DadosRelatorioDTO todosOsDados = webScraperService.extrairTodosOsDados(startOfWeek, endOfWeek);
 
-        if (aniversariantes == null || aniversariantes.isEmpty()) {
-            System.out.println("Nenhum aniversariante encontrado para o período.");
-            return;
+            if (todosOsDados.getCasamentos() != null) {
+                List<CasamentoDTO> casamentosUnicos = removerCasaisRepetidos(todosOsDados.getCasamentos());
+                todosOsDados.setCasamentos(casamentosUnicos);
+            }
+
+            String filename = "relatorio_aniversariantes_" + dataFormatada + ".pdf";
+
+            pdfService.gerarRelatorioPdf(filename, todosOsDados, startOfWeek, endOfWeek);
+
+            System.out.println("Sucesso! Relatório PDF gerado: " + filename);
+
+        } catch (Exception e) {
+            System.err.println("Erro durante a geração dos relatórios: " + e.getMessage());
+            e.printStackTrace();
         }
-        System.out.println(aniversariantes.size() + " aniversariantes encontrados. Gerando planilha...");
-        String filename = "aniversariantes_membros_semana_" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + ".xlsx";
-        excelService.gerarPlanilha(filename, aniversariantes);
-        System.out.println("Relatório " + filename + " gerado com sucesso em background.");
     }
 
+    private List<CasamentoDTO> removerCasaisRepetidos(List<CasamentoDTO> casamentos) {
+        Set<String> nomesNormalizados = new HashSet<>();
+        List<CasamentoDTO> listaUnica = new ArrayList<>();
+
+        for (CasamentoDTO c : casamentos) {
+            String[] partes = c.getCasal().split(" & ");
+            String nomePadrao = c.getCasal();
+
+            if (partes.length == 2) {
+                String conjuge1 = partes[0].trim();
+                String conjuge2 = partes[1].trim();
+
+                if (conjuge1.compareTo(conjuge2) > 0) {
+                    nomePadrao = conjuge2 + " & " + conjuge1;
+                } else {
+                    nomePadrao = conjuge1 + " & " + conjuge2;
+                }
+            }
+
+            if (nomesNormalizados.add(nomePadrao)) {
+                c.setCasal(nomePadrao); // Atualiza para o nome formatado bonito
+                listaUnica.add(c);
+            }
+        }
+
+        System.out.println("Casamentos extraídos: " + casamentos.size() + " | Casais únicos: " + listaUnica.size());
+        return listaUnica;
+    }
 }
