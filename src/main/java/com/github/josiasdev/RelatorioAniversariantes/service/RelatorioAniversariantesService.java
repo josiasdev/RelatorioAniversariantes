@@ -18,7 +18,7 @@ import java.util.Set;
 public class RelatorioAniversariantesService {
 
     private final WebScraperService webScraperService;
-    private final PdfService pdfService; // <-- Trocamos ExcelService por PdfService
+    private final PdfService pdfService;
 
     public RelatorioAniversariantesService(WebScraperService webScraperService, PdfService pdfService) {
         this.webScraperService = webScraperService;
@@ -74,7 +74,7 @@ public class RelatorioAniversariantesService {
             }
 
             if (nomesNormalizados.add(nomePadrao)) {
-                c.setCasal(nomePadrao); // Atualiza para o nome formatado bonito
+                c.setCasal(nomePadrao);
                 listaUnica.add(c);
             }
         }
