@@ -144,7 +144,7 @@ public class WebScraperService {
 
     private List<CasamentoDTO> extrairTabelaCasamentos(WebDriver driver) throws InterruptedException {
         System.out.println("Extraindo dados da tabela de Casamentos...");
-        TimeUnit.SECONDS.sleep(3); // Aguarda a tabela carregar
+        TimeUnit.SECONDS.sleep(3);
 
         List<WebElement> linhas = driver.findElements(By.xpath("//tr[contains(@class, 'scGridFieldOdd') or contains(@class, 'scGridFieldEven')]"));
 
