@@ -1,21 +1,23 @@
 package com.github.josiasdev.RelatorioAniversariantes.controller;
 
 import com.github.josiasdev.RelatorioAniversariantes.service.RelatorioAniversariantesService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/relatorios")
-@Tag(name = "Relatórios", description = "Endpoints para geração de relatórios automatizados")
+@Tag(name = "Relatórios", description = "Endpoints para gestão e automação de relatórios")
 public class RelatorioAniversariantesController {
 
     private final RelatorioAniversariantesService relatorioAniversariantesService;
@@ -26,22 +28,23 @@ public class RelatorioAniversariantesController {
 
     @GetMapping("/gerarAniversariantes")
     @Operation(
-            summary = "Dispara a Geração do Relatório de Aniversariantes",
-            description = "Inicia o processo de automação para extrair a lista de aniversariantes da semana. " +
-                    "A operação é assíncrona e o servidor responde imediatamente."
+            summary = "Geração de Relatório Consolidado",
+            description = "Dispara o processo automatizado que realiza o web scraping no sistema Church, " +
+                    "processa os dados de Membros, Congregados e Casamentos, e gera um PDF unificado. " +
+                    "O processamento é assíncrono."
     )
     @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "202",
-                    description = "Requisição aceita. O relatório está sendo processado em segundo plano."
-            ),
-            @ApiResponse(
-                    responseCode = "500",
-                    description = "Ocorreu um erro interno ao tentar iniciar o processo de geração do relatório."
-            )
+            @ApiResponse(responseCode = "202", description = "Processamento iniciado com sucesso."),
+            @ApiResponse(responseCode = "500", description = "Erro interno ao processar a solicitação.")
     })
-    public ResponseEntity<String> gerarRelatorio() throws IOException, InterruptedException {
-            relatorioAniversariantesService.gerarRelatorioAniversariantes();
-            return ResponseEntity.accepted().body("Requisição recebida. O relatório está sendo gerado em segundo plano.");
+    public ResponseEntity<Map<String, String>> gerarRelatorio() throws IOException, InterruptedException {
+        log.info("Recebida requisição para gerar relatório unificado de aniversariantes.");
+
+        relatorioAniversariantesService.gerarRelatorioAniversariantes();
+
+        return ResponseEntity.accepted().body(Map.of(
+                "status", "Processamento iniciado",
+                "mensagem", "O robô está trabalhando. O arquivo PDF será gerado na raiz do projeto ao finalizar."
+        ));
     }
 }
