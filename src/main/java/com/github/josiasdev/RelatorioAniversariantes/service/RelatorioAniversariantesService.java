@@ -37,6 +37,14 @@ public class RelatorioAniversariantesService {
 
             DadosRelatorioDTO todosOsDados = webScraperService.extrairTodosOsDados(startOfWeek, endOfWeek);
 
+            todosOsDados.getMembros().sort((a, b) ->
+                    Integer.compare(Integer.parseInt(a.getDia()), Integer.parseInt(b.getDia())));
+
+            todosOsDados.getCongregados().sort((a, b) ->
+                    Integer.compare(Integer.parseInt(a.getDia()), Integer.parseInt(b.getDia())));
+
+            todosOsDados.getCasamentos().sort((a, b) ->
+                    Integer.compare(Integer.parseInt(a.getDia()), Integer.parseInt(b.getDia())));
             if (todosOsDados.getCasamentos() != null) {
                 List<CasamentoDTO> casamentosUnicos = removerCasaisRepetidos(todosOsDados.getCasamentos());
                 todosOsDados.setCasamentos(casamentosUnicos);
