@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import com.lowagie.text.Image;
+import org.springframework.core.io.ClassPathResource;
 
 @Service
 public class PdfService {
@@ -51,17 +53,30 @@ public class PdfService {
     }
 
     private void adicionarCabecalho(Document document) throws DocumentException {
-        Font fontTitulo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
-        Font fontSubtitulo = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
+        try {
+            ClassPathResource resource = new ClassPathResource("cabecalho.png");
+            Image cabecalhoImg = Image.getInstance(resource.getURL());
+            cabecalhoImg.setAlignment(Element.ALIGN_CENTER);
+            cabecalhoImg.scaleToFit(500, 120);
 
-        Paragraph titulo = new Paragraph("IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS DE QUIXADÁ\nMINISTÉRIO TEMPLO CENTRAL", fontTitulo);
-        titulo.setAlignment(Element.ALIGN_CENTER);
+            document.add(cabecalhoImg);
+            document.add(new Paragraph("\n"));
 
-        Paragraph endereco = new Paragraph("Rua Epitácio Pessoa, 1074, Centro, Quixadá, Ceará, CEP: 63900-133\n\n", fontSubtitulo);
-        endereco.setAlignment(Element.ALIGN_CENTER);
+        } catch (Exception e) {
+            System.err.println("Aviso: Imagem cabecalho.png não encontrada. Usando cabeçalho em texto.");
 
-        document.add(titulo);
-        document.add(endereco);
+            Font fontTitulo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
+            Font fontSubtitulo = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
+
+            Paragraph titulo = new Paragraph("IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS DE QUIXADÁ\nMINISTÉRIO TEMPLO CENTRAL", fontTitulo);
+            titulo.setAlignment(Element.ALIGN_CENTER);
+
+            Paragraph endereco = new Paragraph("Rua Epitácio Pessoa, 1074, Centro, Quixadá, Ceará, CEP: 63900-133\n\n", fontSubtitulo);
+            endereco.setAlignment(Element.ALIGN_CENTER);
+
+            document.add(titulo);
+            document.add(endereco);
+        }
     }
 
     private void adicionarTabelaAniversariantes(Document document, String titulo, List<AniversarianteDTO> lista) throws DocumentException {
