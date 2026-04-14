@@ -55,13 +55,31 @@ A base do projeto é construída com ferramentas robustas do ecossistema Java:
 
 ### 📂 Estrutura do Projeto
 
-A arquitetura foi dividida focando em responsabilidade única (SOLID):
-* `config/` ➔ Configurações do Swagger e documentação OpenAPI.
-* `dto/` ➔ Classes de transporte de dados (`AniversarianteDTO`, `CasamentoDTO`).
-* `service/` ➔ Regras de negócio e orquestração:
-    * `WebScraperService`: Focado apenas em navegar e extrair os dados.
-    * `PdfService`: Focado apenas em "desenhar" o PDF.
-    * `RelatorioAniversariantesService`: Orquestra o web scraper e a geração de PDF, além de limpar os dados.
+A arquitetura foi desenhada seguindo o padrão **MVC (Model-View-Controller)** adaptado para uma API, priorizando o **Princípio da Responsabilidade Única (SOLID)** para facilitar a manutenção e escalabilidade.
+
+```text
+src/
+└── main/
+    ├── java/
+    │   └── com/github/josiasdev/RelatorioAniversariantes/
+    │       ├── config/         # Configurações globais (CORS, Documentação, Segurança)
+    │       ├── controller/     # Exposição dos Endpoints e documentação da API
+    │       ├── dto/            # Objetos de Transferência de Dados (Estrutura das entidades)
+    │       ├── service/        # Lógica de Negócio e Orquestração
+    │       └── ...             # Classe principal da aplicação
+    └── resources/
+        └── application.properties # Parâmetros de ambiente e credenciais
+```
+
+Detalhamento das Camadas:
+
+- config/: Centraliza as definições do sistema. O arquivo OpenApiConfig.java configura a interface visual do Swagger, permitindo testar o robô sem necessidade de ferramentas externas.
+- controller/: Atua como o "recepcionista" da API. O RelatorioAniversariantesController.java valida a entrada e delega o trabalho pesado para os serviços, respondendo de forma assíncrona para não travar a conexão do usuário.
+- dto/: Define o contrato dos dados. Garante que as informações extraídas pelo robô (como nomes e datas) cheguem ao gerador de PDF em um formato padronizado e limpo. 
+- service/: Onde a "mágica" acontece.
+  - WebScraperService: Especialista em navegação e extração bruta de dados via Selenium.
+  - PdfService: Especialista em design e formatação de documentos.
+  - RelatorioAniversariantesService: O cérebro do sistema. Ele decide a ordem das ações, limpa dados duplicados e une as capacidades de raspagem e geração de documentos.
 
 ---
 
