@@ -1,66 +1,84 @@
-# Relatório de Aniversariantes Automatizado
+# 🤖 Relatório de Aniversariantes Automatizado
 
-Oi! Este projeto foi criado para centralizar e automatizar a emissão de relatórios semanais da igreja. O objetivo é evitar o trabalho manual repetitivo, tendo um "robô" que acessa o sistema, extrai os dados e monta um documento pronto para uso.
+![Java](https://img.shields.io/badge/Java-17-orange.svg)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-brightgreen.svg)
+![Selenium](https://img.shields.io/badge/Selenium-WebDriver-blue.svg)
+![Status](https://img.shields.io/badge/Status-Concluído-success.svg)
+
+Oi! Este projeto foi criado para centralizar e automatizar a emissão de relatórios semanais da igreja. O objetivo é evitar o trabalho manual repetitivo, tendo um "robô" que acessa o sistema, extrai os dados e monta um documento pronto para impressão e compartilhamento.
 
 Ele faz a distinção automática entre membros, congregados e aniversariantes de casamento, agrupando as informações por congregação e pela Sede.
 
+> ⚠️ **Aviso Legal:** Este projeto utiliza automação web (Web Scraping). Ele foi desenvolvido para uso pessoal/institucional visando otimização de tempo. O código pode precisar de ajustes futuros caso a plataforma alvo sofra atualizações na sua interface (HTML/CSS).
 
-### Sobre o sistema alvo (Church)
+---
 
-Toda a automação é feita em cima da plataforma [Church](https://church15.churchsoftware.com.br/frmlogin/).
+### 🎯 Sobre o sistema alvo (Church)
 
-O Church é um sistema de gestão online para igrejas considerado um dos mais completos do Brasil. Ele oferece uma série de ferramentas para aumentar a produtividade dos departamentos da igreja, desenvolvido em diversos módulos para permitir a integração de vários setores (ideal para pequenas, médias e grandes igrejas).
+Toda a automação atua de forma transparente na plataforma [Church](https://church15.churchsoftware.com.br/frmlogin/).
+
+O Church é um sistema de gestão online para igrejas considerado um dos mais completos do Brasil, desenvolvido em diversos módulos para integração de vários setores (ideal para pequenas, médias e grandes igrejas).
 
 Alguns dos recursos que a plataforma oferece incluem:
-* **Secretaria completa:** Cadastro de membros, congregados e visitantes, link de auto cadastro, controle de aniversariantes, pedidos de oração, envio de e-mail e sms nominal/em massa, integração com WhatsApp, aplicativo Church Digital.
-* **Tesouraria e Financeiro:** Entradas, saídas, relatórios de contas a pagar, conciliação bancária, contribuição via cartão de crédito e boleto, exportação contábil.
-* **Outros recursos:** Departamento Infantil, contagem de culto, configuração simples, permissões de acesso, backup de dados, 100% online, certificado SSL e sistema responsivo.
+* **Secretaria completa:** Cadastro de membros, congregados, controle de aniversariantes, aplicativo Church Digital.
+* **Tesouraria e Financeiro:** Entradas, saídas, conciliação bancária, contribuições.
+* **Outros recursos:** Departamento Infantil, contagem de culto, backup de dados, 100% online.
 
+---
 
-### O que o robô faz exatamente?
+### ⚙️ O que o robô faz exatamente?
 
-Quando acionado, o sistema realiza os seguintes passos em segundo plano:
+Quando acionado via API, o sistema realiza os seguintes passos em segundo plano:
 
-1. Abre o navegador de forma invisível.
-2. Faz o login no sistema de gestão da igreja usando as credenciais configuradas.
-3. Navega pelas telas de relatórios de Membros, Congregados e Casamentos.
-4. Preenche as datas da semana atual e aplica os filtros necessários.
-5. Extrai os dados das tabelas de resultado.
-6. Processa as informações (como remover casais que foram cadastrados em duplicidade, organizando por ordem alfabética).
-7. Gera um arquivo final consolidado (utilizando PDF e estruturação em Excel) com todas as listas formatadas.
+1. Abre o navegador Google Chrome de forma invisível (`headless`).
+2. Faz o login no sistema usando as credenciais configuradas.
+3. Navega de forma direta para as telas de relatórios de Membros, Congregados e Casamentos.
+4. Preenche as datas da semana atual e aplica os filtros necessários via formulário.
+5. Extrai os dados em tempo real das tabelas de resultado.
+6. Processa e limpa as informações (ex: remoção de duplicidade de casais e ordenação alfabética).
+7. Gera um **arquivo PDF final consolidado**, com cabeçalho personalizado e todas as listas formatadas.
 
-### Tecnologias que usamos aqui
+---
+
+### 💻 Tecnologias utilizadas
 
 A base do projeto é construída com ferramentas robustas do ecossistema Java:
 
-* Java 17 e Spring Boot 3.5
-* Maven (gerenciador de dependências)
-* Selenium WebDriver e WebDriverManager (para a automação do navegador)
-* OpenPDF (para a criação e formatação do arquivo PDF final)
-* Apache POI (para manipulação e geração de planilhas Excel)
-* SpringDoc OpenAPI / Swagger UI (para documentar e facilitar o uso da API)
-* Lombok (para deixar o código mais limpo)
+* **Java 17** e **Spring Boot 3.5** (Framework base)
+* **Maven** (Gerenciador de dependências)
+* **Selenium WebDriver + WebDriverManager** (Automação do navegador e extração de dados)
+* **OpenPDF** (Criação e formatação do arquivo PDF)
+* **SpringDoc OpenAPI / Swagger UI** (Documentação interativa da API)
+* **Lombok** (Redução de boilerplate de código)
 
-### Como colocar para rodar na sua máquina
+---
 
-Se você precisar rodar, testar ou continuar o desenvolvimento, siga os passos abaixo.
+### 📂 Estrutura do Projeto
 
-**1. O que você vai precisar:**
+A arquitetura foi dividida focando em responsabilidade única (SOLID):
+* `config/` ➔ Configurações do Swagger e documentação OpenAPI.
+* `dto/` ➔ Classes de transporte de dados (`AniversarianteDTO`, `CasamentoDTO`).
+* `service/` ➔ Regras de negócio e orquestração:
+    * `WebScraperService`: Focado apenas em navegar e extrair os dados.
+    * `PdfService`: Focado apenas em "desenhar" o PDF.
+    * `RelatorioAniversariantesService`: Orquestra o web scraper e a geração de PDF, além de limpar os dados.
 
-* Ter o Java 17 (ou superior) instalado.
-* Ter o Maven instalado no seu computador.
-* Ter o navegador Google Chrome instalado (o robô precisa dele para navegar).
+---
+
+### 🚀 Como colocar para rodar na sua máquina
+
+**1. Pré-requisitos:**
+* Java 17 (ou superior) instalado.
+* Maven instalado.
+* Navegador Google Chrome instalado no sistema operacional.
 
 **2. Configurando as senhas:**
-
-O sistema precisa acessar a plataforma da igreja, mas não deixamos as senhas expostas no código. Você precisa configurar o seu arquivo de propriedades.
-
-Vá até a pasta `src/main/resources` e abra o arquivo `application.properties`. Preencha com os seus dados reais:
+As senhas não ficam expostas no código. Vá até a pasta `src/main/resources` e abra o arquivo `application.properties`. Insira suas credenciais:
 
 ```properties
 spring.application.name=RelatorioAniversariantes
 
-# Credenciais para o login no sistema
+# Credenciais para o login no sistema Church
 app.credentials.client-code=SEU_CODIGO_DE_CLIENTE
 app.credentials.username=SEU_USUARIO
 app.credentials.password=SUA_SENHA
@@ -68,27 +86,37 @@ app.credentials.password=SUA_SENHA
 
 **3. Compilando e executando:**
 
-Abra um terminal na pasta principal do projeto e peça ao Maven para baixar as dependências e construir a aplicação:
+Abra um terminal na pasta principal do projeto e baixe as dependências:
+
 ```bash
 mvn clean install
 ```
 
-Depois que compilar com sucesso, você pode rodar o projeto pela sua IDE de preferência ou executando o arquivo gerado:
+**Execute a aplicação:**
 ```bash
 java -jar target/RelatorioAniversariantes-0.0.1-SNAPSHOT.jar
 ```
 
-### Como usar a API
-
-A forma mais fácil e visual de testar a automação é usando a tela do Swagger que configuramos.
+### 🕹️ Como usar a API
+A forma mais fácil e visual de testar a automação é usando o Swagger.
 
 Com o projeto rodando, abra o seu navegador e acesse:
-```bash
-http://localhost:8080/swagger-ui.html
-```
 
-Nessa tela, você verá o endpoint de geração de relatórios. Basta abrir a opção, clicar no botão "Try it out" e depois em "Execute".
+👉 [LocalHost](http://localhost:8080/swagger-ui.html)
 
-O servidor vai responder na hora que recebeu o seu pedido. Em seguida, basta acompanhar o console (terminal) para ver o robô trabalhando. Quando ele terminar, o arquivo PDF aparecerá na mesma pasta onde o projeto está rodando.
+Abra o endpoint de geração de relatórios.
 
-Fique à vontade para explorar, modificar e melhorar o código!
+Clique no botão "Try it out" e depois em "Execute".
+
+O servidor vai responder imediatamente. 
+
+Acompanhe o console da sua IDE/Terminal para ver o robô trabalhando.
+
+Quando finalizado, o arquivo relatorio_aniversariantes_ANO-MES-DIA.pdf aparecerá na pasta raiz do projeto!
+
+### 🔮 Próximos Passos (Roadmap)
+[ ] Implementar rotina de agendamento automático (@Scheduled) para rodar toda segunda-feira de manhã.
+
+[ ] Integrar envio automático do PDF gerado via WhatsApp API.
+
+[ ] Adicionar testes unitários para a lógica de filtro e deduplicação de dados.
