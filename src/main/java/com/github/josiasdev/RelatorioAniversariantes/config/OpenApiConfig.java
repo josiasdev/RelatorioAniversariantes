@@ -25,7 +25,11 @@ public class OpenApiConfig {
                         .contact(new Contact()
                                 .name("Josias Batista")
                                 .email("josiasmartins098@gmail.com")
-                                .url("https://www.linkedin.com/in/josias-batista/"))
+                                .url("https://josias-batista-portfolio.vercel.app")
+                                .extensions(java.util.Map.of(
+                                        "GitHub", "https://github.com/josiasdev",
+                                        "LinkedIn", "https://www.linkedin.com/in/josias-batista/"
+                                )))
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0")));
