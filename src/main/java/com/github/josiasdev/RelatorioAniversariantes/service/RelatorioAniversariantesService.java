@@ -3,16 +3,14 @@ package com.github.josiasdev.RelatorioAniversariantes.service;
 import com.github.josiasdev.RelatorioAniversariantes.dto.CasamentoDTO;
 import com.github.josiasdev.RelatorioAniversariantes.dto.DadosRelatorioDTO;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class RelatorioAniversariantesService {
@@ -25,6 +23,7 @@ public class RelatorioAniversariantesService {
         this.pdfService = pdfService;
     }
 
+    @Scheduled(cron = "0 0 8 * * MON", zone = "America/Fortaleza")
     @Async
     public void gerarRelatorioAniversariantes() {
         try {
@@ -37,14 +36,12 @@ public class RelatorioAniversariantesService {
 
             DadosRelatorioDTO todosOsDados = webScraperService.extrairTodosOsDados(startOfWeek, endOfWeek);
 
-            todosOsDados.getMembros().sort((a, b) ->
-                    Integer.compare(Integer.parseInt(a.getDia()), Integer.parseInt(b.getDia())));
+            todosOsDados.getMembros().sort(Comparator.comparingInt(a -> Integer.parseInt(a.getDia())));
 
-            todosOsDados.getCongregados().sort((a, b) ->
-                    Integer.compare(Integer.parseInt(a.getDia()), Integer.parseInt(b.getDia())));
+            todosOsDados.getCongregados().sort(Comparator.comparingInt(a -> Integer.parseInt(a.getDia())));
 
-            todosOsDados.getCasamentos().sort((a, b) ->
-                    Integer.compare(Integer.parseInt(a.getDia()), Integer.parseInt(b.getDia())));
+            todosOsDados.getCasamentos().sort(Comparator.comparingInt(a -> Integer.parseInt(a.getDia())));
+
             if (todosOsDados.getCasamentos() != null) {
                 List<CasamentoDTO> casamentosUnicos = removerCasaisRepetidos(todosOsDados.getCasamentos());
                 todosOsDados.setCasamentos(casamentosUnicos);
