@@ -138,3 +138,7 @@ Quando finalizado, o arquivo relatorio_aniversariantes_ANO-MES-DIA.pdf aparecer�
 [ ] Integrar envio automático do PDF gerado via WhatsApp API.
 
 [ ] Adicionar testes unitários para a lógica de filtro e deduplicação de dados.
+
+---
+**Desenvolvido por [Josias Batista](https://josias-batista-portfolio.vercel.app)** 🚀 [GitHub](https://github.com/josiasdev) | 💼 [LinkedIn](https://www.linkedin.com/in/josias-batista/)  
+*Fique à vontade para explorar, modificar e contribuir com o código!*
