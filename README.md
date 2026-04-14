@@ -1,8 +1,21 @@
 # Relatório de Aniversariantes Automatizado
 
-Este projeto foi criado para centralizar e automatizar a emissão de relatórios semanais da igreja. O objetivo é evitar o trabalho manual repetitivo, tendo um "robô" que acessa o sistema, extrai os dados e monta um documento pronto para uso.
+Oi! Este projeto foi criado para centralizar e automatizar a emissão de relatórios semanais da igreja. O objetivo é evitar o trabalho manual repetitivo, tendo um "robô" que acessa o sistema, extrai os dados e monta um documento pronto para uso.
 
 Ele faz a distinção automática entre membros, congregados e aniversariantes de casamento, agrupando as informações por congregação e pela Sede.
+
+
+### Sobre o sistema alvo (Church)
+
+Toda a automação é feita em cima da plataforma [Church](https://church15.churchsoftware.com.br/frmlogin/).
+
+O Church é um sistema de gestão online para igrejas considerado um dos mais completos do Brasil. Ele oferece uma série de ferramentas para aumentar a produtividade dos departamentos da igreja, desenvolvido em diversos módulos para permitir a integração de vários setores (ideal para pequenas, médias e grandes igrejas).
+
+Alguns dos recursos que a plataforma oferece incluem:
+* **Secretaria completa:** Cadastro de membros, congregados e visitantes, link de auto cadastro, controle de aniversariantes, pedidos de oração, envio de e-mail e sms nominal/em massa, integração com WhatsApp, aplicativo Church Digital.
+* **Tesouraria e Financeiro:** Entradas, saídas, relatórios de contas a pagar, conciliação bancária, contribuição via cartão de crédito e boleto, exportação contábil.
+* **Outros recursos:** Departamento Infantil, contagem de culto, configuração simples, permissões de acesso, backup de dados, 100% online, certificado SSL e sistema responsivo.
+
 
 ### O que o robô faz exatamente?
 
