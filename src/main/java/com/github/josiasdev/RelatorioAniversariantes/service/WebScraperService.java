@@ -137,7 +137,15 @@ public class WebScraperService {
         return linhas.stream().map(linha -> {
             List<WebElement> celulas = linha.findElements(By.tagName("td"));
             if (celulas.size() > 5) {
-                return new AniversarianteDTO(celulas.get(1).getText(), celulas.get(2).getText(), celulas.get(3).getText(), celulas.get(5).getText());
+                String diaBruto = celulas.get(1).getText().trim();
+                String diaLimpo = diaBruto.replaceAll("^(\\d{2}).*", "$1");
+
+                return new AniversarianteDTO(
+                        diaLimpo,
+                        celulas.get(2).getText(),
+                        celulas.get(3).getText(),
+                        celulas.get(5).getText()
+                );
             }
             return null;
         }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
