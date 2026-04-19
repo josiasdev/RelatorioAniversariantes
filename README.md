@@ -65,10 +65,12 @@ src/
     │       ├── config/         # Configurações globais (CORS, Documentação, Segurança)
     │       ├── controller/     # Exposição dos Endpoints e documentação da API
     │       ├── dto/            # Objetos de Transferência de Dados (Estrutura das entidades)
-    │       ├── service/        # Lógica de Negócio e Orquestração
+    │       ├── service/        # Lógica de Negócio, Orquestração e Integração (WhatsApp)
     │       └── ...             # Classe principal da aplicação
     └── resources/
         └── application.properties # Parâmetros de ambiente e credenciais
+docker/
+└── docker-compose.yml          # Orquestração do container da Evolution API
 ```
 
 Detalhamento das Camadas:
@@ -83,12 +85,51 @@ Detalhamento das Camadas:
 
 ---
 
-### 🚀 Como colocar para rodar na sua máquina
+###  📱 Integração com WhatsApp (Evolution API)
+
+O sistema possui integração automática para enviar o PDF gerado diretamente para o WhatsApp. Para garantir que essa funcionalidade seja gratuita e segura, utilizamos a [Evolution API ](https://doc.evolution-api.com/v2/pt/get-started/introduction) rodando localmente via Docker.
+
+**1. Configurando a segurança do Docker (.env):**
+
+O repositório inclui um arquivo docker-compose.yml pré-configurado na pasta docker/. Para não expor credenciais, a API Key é lida de variáveis de ambiente.
+Crie um arquivo chamado .env na mesma pasta do docker-compose.yml e defina uma senha segura:
+```bash
+EVOLUTION_API_KEY=SUA_CHAVE_SUPER_SECRETA_AQUI
+```
+
+
+**2. Subindo a API:**
+
+Navegue até a pasta docker/ e execute:
+```bash
+docker compose up -d
+```
+A API do WhatsApp estará rodando na porta 8081.
+
+**3. Conectando o seu número (Via Painel Visual):**
+A API já vem com o Evolution Manager embutido para facilitar a conexão:
+1. Abra o seu navegador e acesse: http://localhost:8081/manager
+2. Clique no botão azul **+ INSTÂNCIA** e preencha os dados:
+  * **Nome da instância:** `igreja`
+  * **Integração:** Selecione `Baileys`
+  * **API Key:** Cole a sua chave (a mesma do arquivo `.env`)
+  * Clique em **SALVAR**.
+3. A instância aparecerá na lista. Clique nela e, na tela de configurações, clique no botão vermelho **CONECTAR**.
+4. Um **QR Code** aparecerá na tela do seu computador
+5. Pegue o seu celular, abra o WhatsApp e vá em: **Configurações > Dispositivos conectados > Conectar dispositivo**.
+6. Escaneie o QR Code na tela.
+
+
+Pronto! A interface mostrará o status "Conectado" e o seu robô Java já tem permissão para enviar os PDFs de forma autônoma.
+
+
+### 🚀 Como colocar a API Java para rodar
 
 **1. Pré-requisitos:**
 * Java 17 (ou superior) instalado.
 * Maven instalado.
 * Navegador Google Chrome instalado no sistema operacional.
+* Ambiente Docker rodando a Evolution API (conforme passos acima).
 
 **2. Configurando as senhas:**
 As senhas e configurações de disparo não ficam expostas no código. Vá até a pasta `src/main/resources` e abra o arquivo `application.properties`. Insira suas credenciais e os dados da sua Evolution API:
@@ -121,24 +162,22 @@ mvn clean install
 java -jar target/RelatorioAniversariantes-0.0.1-SNAPSHOT.jar
 ```
 
-### 🕹️ Como usar a API
-A forma mais fácil e visual de testar a automação é usando o Swagger.
+### 🕹️ Como testar a Automação
+O sistema roda automaticamente toda segunda-feira às 8h da manhã. Porém, você pode dispará-lo manualmente usando o Swagger.
 
 Com o projeto rodando, abra o seu navegador e acesse:
 
-👉 [LocalHost](http://localhost:8080/swagger-ui.html)
+👉 [LocalHost - Swagger UI](http://localhost:8080/swagger-ui.html)
 
-Abra o endpoint de geração de relatórios.
+1. Abra o endpoint de geração de relatórios.
+2. Clique no botão "Try it out" e depois em "Execute".
+3. O servidor vai responder com status 202 (Accepted).
+4. Acompanhe o console da sua IDE/Terminal para ver o robô trabalhando.
 
-Clique no botão "Try it out" e depois em "Execute".
+Quando finalizado, o arquivo relatorio_aniversariantes_ANO-MES-DIA.pdf aparecerá na pasta raiz do projeto e será disparado via WhatsApp!
 
-O servidor vai responder imediatamente. 
 
-Acompanhe o console da sua IDE/Terminal para ver o robô trabalhando.
-
-Quando finalizado, o arquivo relatorio_aniversariantes_ANO-MES-DIA.pdf aparecerá na pasta raiz do projeto!
-
-### 🔮 Próximos Passos (Roadmap)
+### 🔮 Roadmap (Concluído)
 [X] Implementar rotina de agendamento automático (@Scheduled) para rodar toda segunda-feira de manhã.
 
 [X] Adicionar testes unitários para a lógica de filtro e duplicação de dados.
