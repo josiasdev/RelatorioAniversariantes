@@ -186,5 +186,14 @@ Quando finalizado, o arquivo relatorio_aniversariantes_ANO-MES-DIA.pdf aparecer�
 
 
 ---
-**Desenvolvido por [Josias Batista](https://josias-batista-portfolio.vercel.app)** 🚀 [GitHub](https://github.com/josiasdev) | 💼 [LinkedIn](https://www.linkedin.com/in/josias-batista/)  
-*Fique à vontade para explorar, modificar e contribuir com o código!*
+
+### 👨‍💻 Autor
+<img src="https://avatars.githubusercontent.com/u/71450649?v=4" width="100px" alt="Foto de perfil de Josias"/>
+
+Desenvolvido com dedicação por **Josias Batista**.
+
+[![Portfolio](https://img.shields.io/badge/Portfólio-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://josias-batista-portfolio.vercel.app)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/josias-batista/)
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/josiasdev)
+
+> Se este projeto te ajudou no seu dia a dia ou você achou a arquitetura interessante, não esqueça de deixar uma **⭐ Star** no repositório! Toda contribuição, fork ou issue é super bem-vinda.
