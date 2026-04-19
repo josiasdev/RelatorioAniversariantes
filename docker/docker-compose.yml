@@ -9,5 +9,5 @@ services:
       - "8081:8080"
     environment:
       - SERVER_URL=http://localhost:8081
-      - AUTHENTICATION_API_KEY=minha-chave-secreta-church
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
       - LOG_LEVEL=INFO
