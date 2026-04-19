@@ -17,10 +17,12 @@ public class RelatorioAniversariantesService {
 
     private final WebScraperService webScraperService;
     private final PdfService pdfService;
+    private final WhatsAppService whatsAppService;
 
-    public RelatorioAniversariantesService(WebScraperService webScraperService, PdfService pdfService) {
+    public RelatorioAniversariantesService(WebScraperService webScraperService, PdfService pdfService, WhatsAppService whatsAppService) {
         this.webScraperService = webScraperService;
         this.pdfService = pdfService;
+        this.whatsAppService = whatsAppService;
     }
 
     @Scheduled(cron = "0 0 8 * * MON", zone = "America/Fortaleza")
@@ -52,6 +54,8 @@ public class RelatorioAniversariantesService {
             pdfService.gerarRelatorioPdf(filename, todosOsDados, startOfWeek, endOfWeek);
 
             System.out.println("Sucesso! Relatório PDF gerado: " + filename);
+
+            whatsAppService.enviarRelatorioPdf(filename);
 
         } catch (Exception e) {
             System.err.println("Erro durante a geração dos relatórios: " + e.getMessage());
