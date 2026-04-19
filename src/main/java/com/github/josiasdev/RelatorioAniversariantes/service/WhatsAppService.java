@@ -17,15 +17,20 @@ import java.util.Base64;
 @Service
 public class WhatsAppService {
 
+    private final String apiUrl;
 
-    @Value("${whatsapp.api.url:http://localhost:8081/message/sendMedia/igreja}")
-    private String apiUrl;
+    private final String apiKey;
 
-    @Value("${whatsapp.api.key:minha-chave-secreta-church}")
-    private String apiKey;
+    private final String numeroDestinatario;
 
-    @Value("${whatsapp.destinatario:5585982317976}")
-    private String numeroDestinatario;
+    public WhatsAppService(
+            @Value("${whatsapp.api.url}") String apiUrl,
+            @Value("${whatsapp.api.key}") String apiKey,
+            @Value("${whatsapp.destinatario}") String numeroDestinatario) {
+        this.apiUrl = apiUrl;
+        this.apiKey = apiKey;
+        this.numeroDestinatario = numeroDestinatario;
+    }
 
     public void enviarRelatorioPdf(String caminhoArquivoPdf) {
         log.info("Iniciando envio do PDF para o WhatsApp: {}", numeroDestinatario);
@@ -54,20 +59,20 @@ public class WhatsAppService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(apiUrl))
                     .header("Content-Type", "application/json")
-                    .header("apikey", apiKey) // Cabeçalho de autenticação
+                    .header("apikey", apiKey)
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                log.info("✅ PDF enviado com sucesso para o WhatsApp!");
+                log.info("PDF enviado com sucesso para o WhatsApp!");
             } else {
-                log.error("❌ Falha ao enviar para o WhatsApp. Status: {} | Retorno: {}", response.statusCode(), response.body());
+                log.error("Falha ao enviar para o WhatsApp. Status: {} | Retorno: {}", response.statusCode(), response.body());
             }
 
         } catch (IOException | InterruptedException e) {
-            log.error("❌ Erro ao tentar processar e enviar o PDF: {}", e.getMessage());
+            log.error("Erro ao tentar processar e enviar o PDF: {}", e.getMessage());
             Thread.currentThread().interrupt();
         }
     }
