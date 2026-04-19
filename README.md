@@ -133,11 +133,12 @@ Acompanhe o console da sua IDE/Terminal para ver o robô trabalhando.
 Quando finalizado, o arquivo relatorio_aniversariantes_ANO-MES-DIA.pdf aparecerá na pasta raiz do projeto!
 
 ### 🔮 Próximos Passos (Roadmap)
-[ ] Implementar rotina de agendamento automático (@Scheduled) para rodar toda segunda-feira de manhã.
+[X] Implementar rotina de agendamento automático (@Scheduled) para rodar toda segunda-feira de manhã.
 
-[ ] Integrar envio automático do PDF gerado via WhatsApp API.
+[X] Adicionar testes unitários para a lógica de filtro e duplicação de dados.
 
-[ ] Adicionar testes unitários para a lógica de filtro e deduplicação de dados.
+[X] Integrar envio automático do PDF gerado via WhatsApp API.
+
 
 ---
 **Desenvolvido por [Josias Batista](https://josias-batista-portfolio.vercel.app)** 🚀 [GitHub](https://github.com/josiasdev) | 💼 [LinkedIn](https://www.linkedin.com/in/josias-batista/)  
