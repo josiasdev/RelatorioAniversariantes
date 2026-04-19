@@ -91,7 +91,7 @@ Detalhamento das Camadas:
 * Navegador Google Chrome instalado no sistema operacional.
 
 **2. Configurando as senhas:**
-As senhas não ficam expostas no código. Vá até a pasta `src/main/resources` e abra o arquivo `application.properties`. Insira suas credenciais:
+As senhas e configurações de disparo não ficam expostas no código. Vá até a pasta `src/main/resources` e abra o arquivo `application.properties`. Insira suas credenciais e os dados da sua Evolution API:
 
 ```properties
 spring.application.name=RelatorioAniversariantes
@@ -100,6 +100,12 @@ spring.application.name=RelatorioAniversariantes
 app.credentials.client-code=SEU_CODIGO_DE_CLIENTE
 app.credentials.username=SEU_USUARIO
 app.credentials.password=SUA_SENHA
+
+# --- CONFIGURAÇÕES DO WHATSAPP (EVOLUTION API) ---
+whatsapp.api.url=http://localhost:8081/message/sendMedia/igreja
+whatsapp.api.key=SUA_GLOBAL_API_KEY_AQUI
+# Número do destinatário (Código do país + DDD + Número)
+whatsapp.destinatario=5511999999999
 ```
 
 **3. Compilando e executando:**
