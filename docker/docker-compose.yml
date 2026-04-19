@@ -1,0 +1,13 @@
+name: evolution-igreja
+
+services:
+  evolution-api:
+    image: atendai/evolution-api:v1.8.2
+    container_name: evolution-api
+    restart: always
+    ports:
+      - "8081:8080"
+    environment:
+      - SERVER_URL=http://localhost:8081
+      - AUTHENTICATION_API_KEY=minha-chave-secreta-church
+      - LOG_LEVEL=INFO
