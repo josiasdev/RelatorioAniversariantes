@@ -9,14 +9,16 @@ The project is intended to reduce repetitive manual work and produce a ready-to-
 ## Main Responsibilities
 
 - Trigger report generation through an HTTP API endpoint (`GET /relatorios/gerarAniversariantes`).
-- Run the same report generation automatically every Monday at 08:00 in the America/Fortaleza timezone (`@Scheduled`).
-- Use Selenium WebDriver with headless Chrome to access the external church management system.
+- Expose an execution monitoring endpoint (`GET /relatorios/status`) to check real-time status (`IDLE`, `EM_PROGRESSO`, `SUCESSO`, `ERRO`), duration, record totals, and error details.
+- Run the report generation automatically every Monday at 08:00 in the America/Fortaleza timezone (`@Scheduled`).
+- Use Selenium WebDriver with headless Chrome to access the external church management system, with retry logic for login stability.
 - Handle cross-month week ranges seamlessly by dividing queries day-by-day when a week spans across two consecutive months.
 - Extract member birthdays, congregant birthdays, and wedding anniversaries for the current week (including congregation details).
 - Sort report entries chronologically relative to the start of the week.
 - Remove duplicated wedding anniversary couples by normalizing spouse order.
 - Support multi-page results scraping and dynamic form interactions via JavaScript DOM execution.
-- Generate a formatted PDF with multi-page table splitting and repeated table headers.
+- Generate a formatted PDF in a dedicated output directory (`relatorios/`) with multi-page table splitting and repeated table headers.
+- Perform automated cleanup (`RelatorioLimpezaService`) for PDF reports older than configured retention days (default: 30 days).
 - Send the generated PDF to WhatsApp through Evolution API.
 
 ## Technology Stack
@@ -40,33 +42,35 @@ src/main/java/com/github/josiasdev/RelatorioAniversariantes/
 ├── config/           # Global configurations (CORS, Documentation, Security)
 ├── controller/       # API endpoints and documentation
 ├── dto/              # Data Transfer Objects (Entity structures)
-└── service/          # Business logic, orchestration, scraping, PDF generation & WhatsApp
+└── service/          # Business logic, orchestration, scraping, tracking, retention & WhatsApp
 ```
 
 ### Main Components
 
 - `RelatorioAniversariantesApplication`: Spring Boot entry point. Enables async execution and scheduled tasks.
-- `RelatorioAniversariantesController`: exposes the report generation endpoint under `/relatorios`. Validates input and delegates work to services asynchronously.
-- `RelatorioAniversariantesService`: orchestrates the top-level report workflow, triggering scheduled jobs, deduplicating wedding couples, generating the PDF file, and sending it via WhatsApp.
+- `RelatorioAniversariantesController`: exposes report generation (`GET /relatorios/gerarAniversariantes`) and execution monitoring (`GET /relatorios/status`). Validates input and delegates work asynchronously.
+- `RelatorioAniversariantesService`: orchestrates the top-level report workflow, triggering scheduled jobs, deduplicating wedding couples, generating the PDF file, updating tracker status, and sending via WhatsApp.
+- `RelatorioExecucaoTrackerService`: tracks in-memory execution state (`IDLE`, `EM_PROGRESSO`, `SUCESSO`, `ERRO`), timestamps, duration, output path, and record totals.
+- `RelatorioLimpezaService`: automatically purges generated PDF reports older than configured retention days from the `relatorios/` directory.
 - `RelatorioSemanalService`: handles date range calculations for weekly reports. If a week crosses a month boundary (e.g., June 29 to July 5), it performs day-by-day queries to avoid missing data, consolidates data sets, and sorts all entries chronologically relative to the week's Monday.
-- `WebScraperService`: handles Selenium setup, login, navigation, atomic form select execution via JavaScript, multi-page pagination navigation, and raw data extraction.
-- `PdfService`: handles document design and formatting. Generates 4-column tables for members, congregants, and marriage anniversaries (including congregation info), configuring page split behavior and repeated table headers.
-- `WhatsAppService`: reads the generated PDF, converts it to Base64, and sends it as a document through Evolution API with robust error handling.
+- `WebScraperService`: handles Selenium setup, login retries, navigation, atomic form select execution via JavaScript, multi-page pagination navigation, and raw data extraction with clean driver shutdown.
+- `PdfService`: handles document design and formatting. Creates output folder (`relatorios/`), generates 4-column tables for members, congregants, and marriage anniversaries (including congregation info), configuring page split behavior and repeated table headers.
+- `WhatsAppService`: reads the generated PDF from the output directory, converts it to Base64, and sends it as a document through Evolution API with robust error handling.
 - DTOs (`AniversarianteDTO`, `CasamentoDTO`, `DadosRelatorioDTO`): represent extracted birthday, wedding anniversary (including congregation), and consolidated report data.
 
 ## API
 
-The main endpoint is:
+Main endpoints under `/relatorios`:
 
 ```text
 GET /relatorios/gerarAniversariantes
+GET /relatorios/status
 ```
 
 Expected behavior:
-- Returns HTTP `202 Accepted` when the process starts.
-- Runs the report generation asynchronously.
-- Writes the generated PDF to the project root using this naming pattern:
-  `relatorio_aniversariantes_YYYY-MM-DD.pdf`
+- `GET /relatorios/gerarAniversariantes`: Returns HTTP `202 Accepted` when the process starts and runs report generation asynchronously.
+- `GET /relatorios/status`: Returns HTTP `200 OK` with JSON containing current execution status, start/end timestamps, duration, generated file path, and record metrics.
+- PDF output path pattern: `relatorios/relatorio_aniversariantes_YYYY-MM-DD.pdf`
 
 Swagger UI is available when the application is running:
 `http://localhost:8080/swagger-ui.html`
@@ -74,15 +78,17 @@ Swagger UI is available when the application is running:
 ## Runtime Flow
 
 1. Calculate current week range (Monday to Sunday).
-2. Start headless Chrome through Selenium.
-3. Authenticate into the external church management system using credentials from `application.properties`.
-4. Fetch data via `RelatorioSemanalService`: single search if within the same month, or day-by-day queries if crossing a month boundary.
-5. `WebScraperService` selects search options via atomic JavaScript execution, handles pagination across multi-page table results, and extracts data including congregation info.
-6. Sort all extracted lists by day relative to the week's Monday.
-7. Normalize spouse name order to remove duplicate wedding anniversary couples.
-8. Generate the final PDF with `PdfService` featuring formatted 4-column tables.
-9. Send the PDF through WhatsApp to the configured number.
-10. Close the browser session.
+2. Update tracker state to `EM_PROGRESSO`.
+3. Start headless Chrome through Selenium with login retry logic.
+4. Authenticate into the external church management system using credentials from `application.properties`.
+5. Fetch data via `RelatorioSemanalService`: single search if within the same month, or day-by-day queries if crossing a month boundary.
+6. `WebScraperService` selects search options via atomic JavaScript execution, handles pagination across multi-page table results, and extracts data including congregation info.
+7. Sort all extracted lists by day relative to the week's Monday.
+8. Normalize spouse name order to remove duplicate wedding anniversary couples.
+9. Generate the final PDF with `PdfService` saved in the `relatorios/` folder.
+10. Send the PDF through WhatsApp to the configured number.
+11. Update tracker state to `SUCESSO` (or `ERRO` on failure).
+12. Close browser session cleanly in a `finally` block.
 
 ## Docker / WhatsApp Integration
 
@@ -116,4 +122,5 @@ To connect your number:
 
 - **Web Scraping Vulnerability**: The scraping code depends on the external platform HTML structure. If that platform changes element IDs, table classes, or navigation flow, `WebScraperService` will need updates.
 - **Cross-Month Logic**: The `RelatorioSemanalService` handles multi-month week transitions automatically.
+- **Report Retention**: `RelatorioLimpezaService` runs nightly at 03:00 to purge PDFs older than retention threshold.
 - **Scheduled Task**: The scheduled task runs every Monday at 08:00 in the `America/Fortaleza` timezone.

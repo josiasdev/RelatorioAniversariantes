@@ -1,6 +1,7 @@
 package com.github.josiasdev.RelatorioAniversariantes.controller;
 
 import com.github.josiasdev.RelatorioAniversariantes.service.RelatorioAniversariantesService;
+import com.github.josiasdev.RelatorioAniversariantes.service.RelatorioExecucaoTrackerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -21,9 +22,13 @@ import java.util.Map;
 public class RelatorioAniversariantesController {
 
     private final RelatorioAniversariantesService relatorioAniversariantesService;
+    private final RelatorioExecucaoTrackerService trackerService;
 
-    public RelatorioAniversariantesController(RelatorioAniversariantesService relatorioAniversariantesService) {
+    public RelatorioAniversariantesController(
+            RelatorioAniversariantesService relatorioAniversariantesService,
+            RelatorioExecucaoTrackerService trackerService) {
         this.relatorioAniversariantesService = relatorioAniversariantesService;
+        this.trackerService = trackerService;
     }
 
     @GetMapping("/gerarAniversariantes")
@@ -44,7 +49,17 @@ public class RelatorioAniversariantesController {
 
         return ResponseEntity.accepted().body(Map.of(
                 "status", "Processamento iniciado",
-                "mensagem", "O robô está trabalhando. O arquivo PDF será gerado na raiz do projeto ao finalizar."
+                "mensagem", "O robô está trabalhando. O arquivo PDF será gerado no diretório configurado ao finalizar."
         ));
+    }
+
+    @GetMapping("/status")
+    @Operation(
+            summary = "Consulta o Status da Execução",
+            description = "Retorna o status atual da automação (IDLE, EM_PROGRESSO, SUCESSO, ERRO), horário de início/fim, " +
+                    "duração em segundos, caminho do PDF gerado e total de registros extraídos."
+    )
+    public ResponseEntity<Map<String, Object>> obterStatus() {
+        return ResponseEntity.ok(trackerService.obterStatusDetalhado());
     }
 }

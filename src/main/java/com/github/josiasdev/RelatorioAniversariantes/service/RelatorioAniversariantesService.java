@@ -18,16 +18,23 @@ public class RelatorioAniversariantesService {
     private final RelatorioSemanalService relatorioSemanalService;
     private final PdfService pdfService;
     private final WhatsAppService whatsAppService;
+    private final RelatorioExecucaoTrackerService trackerService;
 
-    public RelatorioAniversariantesService(RelatorioSemanalService relatorioSemanalService, PdfService pdfService, WhatsAppService whatsAppService) {
+    public RelatorioAniversariantesService(
+            RelatorioSemanalService relatorioSemanalService,
+            PdfService pdfService,
+            WhatsAppService whatsAppService,
+            RelatorioExecucaoTrackerService trackerService) {
         this.relatorioSemanalService = relatorioSemanalService;
         this.pdfService = pdfService;
         this.whatsAppService = whatsAppService;
+        this.trackerService = trackerService;
     }
 
     @Scheduled(cron = "0 0 8 * * MON", zone = "America/Fortaleza")
     @Async
     public void gerarRelatorioAniversariantes() {
+        trackerService.iniciarExecucao();
         try {
             LocalDate today = LocalDate.now();
             LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -46,14 +53,21 @@ public class RelatorioAniversariantesService {
 
             String filename = "relatorio_aniversariantes_" + dataFormatada + ".pdf";
 
-            pdfService.gerarRelatorioPdf(filename, todosOsDados, startOfWeek, endOfWeek);
+            String caminhoGerado = pdfService.gerarRelatorioPdf(filename, todosOsDados, startOfWeek, endOfWeek);
 
-            System.out.println("Sucesso! Relatório PDF gerado: " + filename);
+            System.out.println("Sucesso! Relatório PDF gerado: " + caminhoGerado);
 
-            whatsAppService.enviarRelatorioPdf(filename);
+            whatsAppService.enviarRelatorioPdf(caminhoGerado);
+
+            int qtdMembros = todosOsDados.getMembros() != null ? todosOsDados.getMembros().size() : 0;
+            int qtdCongregados = todosOsDados.getCongregados() != null ? todosOsDados.getCongregados().size() : 0;
+            int qtdCasamentos = todosOsDados.getCasamentos() != null ? todosOsDados.getCasamentos().size() : 0;
+
+            trackerService.registrarSucesso(caminhoGerado, qtdMembros, qtdCongregados, qtdCasamentos);
 
         } catch (Exception e) {
             System.err.println("Erro durante a geração dos relatórios: " + e.getMessage());
+            trackerService.registrarErro(e.getMessage());
             e.printStackTrace();
         }
     }

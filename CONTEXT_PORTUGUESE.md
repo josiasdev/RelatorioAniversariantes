@@ -9,14 +9,16 @@ O objetivo do projeto é reduzir trabalho manual repetitivo e gerar um relatóri
 ## Responsabilidades Principais
 
 - Disparar a geração do relatório por meio de um endpoint HTTP (`GET /relatorios/gerarAniversariantes`).
+- Expor um endpoint de monitoramento (`GET /relatorios/status`) para consultar o estado em tempo real (`IDLE`, `EM_PROGRESSO`, `SUCESSO`, `ERRO`), duração, totais extraídos e mensagens de erro.
 - Executar a mesma geração automaticamente toda segunda-feira às 08:00 no fuso America/Fortaleza (`@Scheduled`).
-- Usar Selenium WebDriver com Chrome em modo headless para acessar o sistema externo da igreja.
+- Usar Selenium WebDriver com Chrome em modo headless para acessar o sistema externo da igreja, contando com tentativas automáticas em caso de falha de login.
 - Tratar automaticamente semanas que cruzam a virada de mês (ex: 29/06 a 05/07), fragmentando as consultas dia a dia para garantir a extração completa dos dados.
 - Extrair aniversariantes membros, aniversariantes congregados e aniversariantes de casamento (incluindo dados da congregação) da semana atual.
 - Ordenar os registros cronologicamente em relação ao início da semana (segunda-feira).
 - Remover casais duplicados nos aniversários de casamento normalizando a ordem dos cônjuges.
 - Tratar paginação em múltiplos resultados de busca e seleção atômica de seletores via execução de JavaScript.
-- Gerar um PDF formatado com tabelas de 4 colunas (com repetição de cabeçalho e divisão dinâmica de páginas).
+- Gerar um PDF formatado em pasta dedicada (`relatorios/`) com tabelas de 4 colunas (com repetição de cabeçalho e divisão dinâmica de páginas).
+- Realizar limpeza automática (`RelatorioLimpezaService`) de relatórios PDF mais antigos que a retenção configurada (padrão: 30 dias).
 - Enviar o PDF gerado para o WhatsApp por meio da Evolution API.
 
 ## Tecnologias
@@ -40,33 +42,35 @@ src/main/java/com/github/josiasdev/RelatorioAniversariantes/
 ├── config/           # Configurações globais (CORS, Documentação, Segurança)
 ├── controller/       # Exposição dos Endpoints e documentação da API
 ├── dto/              # Objetos de Transferência de Dados (Estrutura das entidades)
-└── service/          # Lógica de Negócio, Orquestração, Raspagem, PDF e Integração WhatsApp
+└── service/          # Lógica de Negócio, Orquestração, Raspagem, Rastreamento, Retenção, PDF e WhatsApp
 ```
 
 ### Componentes Principais
 
 - `RelatorioAniversariantesApplication`: Ponto de entrada Spring Boot. Habilita execução assíncrona e tarefas agendadas.
-- `RelatorioAniversariantesController`: Atua como o "recepcionista" da API. Valida a entrada e delega o trabalho pesado para os serviços de forma assíncrona.
-- `RelatorioAniversariantesService`: Orquestra o fluxo de alto nível, disparando o agendamento, desduplicando casais de casamento, invocando a geração do PDF e solicitando o envio via WhatsApp.
+- `RelatorioAniversariantesController`: Atua como o "recepcionista" da API. Expõe a geração de relatórios (`GET /relatorios/gerarAniversariantes`) e consulta de status (`GET /relatorios/status`).
+- `RelatorioAniversariantesService`: Orquestra o fluxo de alto nível, disparando o agendamento, desduplicando casais, atualizando o rastreador de status, gerando o PDF e solicitando o envio via WhatsApp.
+- `RelatorioExecucaoTrackerService`: Mantém em memória o estado da execução (`IDLE`, `EM_PROGRESSO`, `SUCESSO`, `ERRO`), horários, duração, caminho do arquivo e totais de registros.
+- `RelatorioLimpezaService`: Apaga automaticamente arquivos PDF antigos da pasta `relatorios/` de acordo com a retenção configurada (30 dias).
 - `RelatorioSemanalService`: Responsável pelo cálculo do período semanal. Caso a semana perpasse dois meses diferentes, realiza a extração dia a dia para contornar limitações do formulário do sistema Church, consolida as listas e ordena os dados cronologicamente a partir de segunda-feira.
-- `WebScraperService`: Especialista em navegação Selenium, seleção atômica de opções de formulários via JS, tratamento de paginação de resultados e extração bruta de dados (incluindo congregação).
-- `PdfService`: Especialista em design e formatação de documentos. Monta tabelas de 4 colunas para membros, congregados e casamentos, configurando repetição de cabeçalhos e divisão de linhas entre páginas.
-- `WhatsAppService`: Lê o PDF gerado, converte para Base64 e envia como documento via Evolution API com tratamento resiliente de exceções.
-- DTOs (`AniversarianteDTO`, `CasamentoDTO`, `DadosRelatorioDTO`): Representam os dados extraídos, garantindo padronização e incluindo o campo congregação nos casamentos.
+- `WebScraperService`: Especialista em navegação Selenium com tentativas de login, seleção atômica via JS, tratamento de paginação e encerramento seguro do driver em bloco `finally`.
+- `PdfService`: Especialista em design e formatação de documentos. Garante a criação da pasta `relatorios/` e gera tabelas de 4 colunas com repetição de cabeçalho.
+- `WhatsAppService`: Lê o PDF gerado a partir do diretório de saída, converte para Base64 e envia como documento via Evolution API.
+- DTOs (`AniversarianteDTO`, `CasamentoDTO`, `DadosRelatorioDTO`): Representam os dados extraídos.
 
 ## API
 
-O endpoint principal é:
+Endpoints sob `/relatorios`:
 
 ```text
 GET /relatorios/gerarAniversariantes
+GET /relatorios/status
 ```
 
 Comportamento esperado:
-- Retorna HTTP `202 Accepted` quando o processo é iniciado.
-- Executa a geração do relatório de forma assíncrona.
-- Grava o PDF gerado na raiz do projeto usando este padrão de nome:
-  `relatorio_aniversariantes_YYYY-MM-DD.pdf`
+- `GET /relatorios/gerarAniversariantes`: Retorna HTTP `202 Accepted` quando o processo é iniciado assincronamente.
+- `GET /relatorios/status`: Retorna HTTP `200 OK` com o estado atual, horários de execução, duração, totais de membros/congregados/casamentos e caminho do arquivo.
+- Padrão do PDF gerado: `relatorios/relatorio_aniversariantes_YYYY-MM-DD.pdf`
 
 Com a aplicação em execução, o Swagger UI fica disponível em:
 `http://localhost:8080/swagger-ui.html`
@@ -74,15 +78,17 @@ Com a aplicação em execução, o Swagger UI fica disponível em:
 ## Fluxo de Execução
 
 1. Calcula o período da semana atual (de segunda-feira a domingo).
-2. Inicia o Chrome headless pelo Selenium.
-3. Autentica no sistema externo de gestão da igreja usando as credenciais de `application.properties`.
-4. Coleta os dados através do `RelatorioSemanalService`: se for no mesmo mês realiza busca direta; se cruzar a virada do mês, realiza consultas dia a dia.
-5. O `WebScraperService` executa seleções de formulários via JS, lida com a paginação da tabela de resultados e extrai os campos (incluindo a congregação).
-6. Ordena todas as listas por dia relativo à segunda-feira de início da semana.
-7. Normaliza a ordem dos nomes dos casais e remove duplicidades em casamentos.
-8. Gera o PDF final consolidado via `PdfService` com tabelas de 4 colunas.
-9. Envia o PDF pelo WhatsApp para o número configurado.
-10. Encerra a sessão do navegador.
+2. Atualiza o status no rastreador para `EM_PROGRESSO`.
+3. Inicia o Chrome headless com retry no login.
+4. Autentica no sistema externo Church.
+5. Coleta os dados através do `RelatorioSemanalService` (busca direta ou fragmentada por dia na troca de mês).
+6. O `WebScraperService` executa seleções via JS, navega pelas páginas de resultados e extrai os campos.
+7. Ordena todas as listas por dia relativo à segunda-feira.
+8. Normaliza a ordem dos nomes dos casais e remove duplicidades.
+9. Gera o PDF final consolidado via `PdfService` na pasta `relatorios/`.
+10. Envia o PDF pelo WhatsApp para o número configurado.
+11. Atualiza o rastreador com o status `SUCESSO` (ou `ERRO` em caso de falha).
+12. Encerra a sessão do navegador no bloco `finally`.
 
 ## Docker / Integração WhatsApp
 
@@ -115,4 +121,5 @@ Passos para conectar o número:
 
 - **Vulnerabilidade de Automação Web**: O scraping depende da estrutura HTML da plataforma externa. Se a plataforma alterar IDs de elementos, classes de tabela ou fluxo de navegação, o `WebScraperService` precisará de ajustes.
 - **Lógica de Transição de Mês**: O `RelatorioSemanalService` resolve a fragmentação da busca semanal automaticamente quando há troca de mês.
+- **Retenção de Arquivos**: O `RelatorioLimpezaService` executa diariamente às 03:00 para apagar PDFs antigos.
 - A tarefa agendada roda toda segunda-feira às 08:00 no fuso America/Fortaleza.

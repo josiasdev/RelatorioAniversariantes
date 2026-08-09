@@ -7,7 +7,7 @@ Leia em outros idiomas: [English](README.md)
 ![Selenium](https://img.shields.io/badge/Selenium-WebDriver-blue.svg)
 ![Status](https://img.shields.io/badge/Status-Conclu%C3%ADdo-success.svg)
 
-Esta aplicação foi criada para automatizar a emissão e entrega de relatórios semanais da igreja, abrangendo aniversariantes membros, congregados e aniversariantes de casamento. Utilizando automação web invisível, cálculo inteligente de períodos semanais, geração de PDF formatado e envio via WhatsApp, o sistema elimina tarefas administrativas manuais repetitivas.
+Esta aplicação foi criada para automatizar a emissão e entrega de relatórios semanais da igreja, abrangendo aniversariantes membros, congregados e aniversariantes de casamento. Utilizando automação web invisível, cálculo inteligente de períodos semanais, geração de PDF formatado, monitoramento de status e envio via WhatsApp, o sistema elimina tarefas administrativas manuais repetitivas.
 
 O sistema faz a distinção automática entre membros, congregados e casamentos, agrupando os dados por congregação e pela Sede.
 
@@ -30,15 +30,18 @@ O Church é um sistema de gestão em nuvem utilizado por diversas igrejas no Bra
 
 Quando acionado manualmente via API ou automaticamente pelo agendador cron:
 
-1. Inicia uma instância do navegador Google Chrome em modo invisível (`headless`) via Selenium WebDriver.
-2. Faz login no sistema Church utilizando as credenciais configuradas.
-3. Avalia o período da semana (de segunda-feira a domingo). Caso a semana cruze a virada do mês (ex: 29 de junho a 05 de julho), o `RelatorioSemanalService` executa consultas dia a dia para contornar limitações do formulário externo e garantir a extração completa dos dados.
-4. Executa seleções atômicas de formulários via JavaScript (`selecionarOpcoesDeFormaAtomica`) para garantir que os seletores reativos do sistema sejam preenchidos sem perda de contexto ou erros de elemento desatualizado.
-5. Navega pela paginação de resultados (`clicarProximaPaginaSeExistir`) para extrair todos os registros de membros, congregados e casamentos (incluindo a congregação).
-6. Ordena todas as listas cronologicamente a partir de segunda-feira.
-7. Normaliza a ordem dos nomes dos cônjuges para eliminar casais duplicados nos aniversários de casamento.
-8. Gera um **arquivo PDF consolidado** (`PdfService`) com tabelas de 4 colunas, repetição de cabeçalho entre páginas e formatação limpa.
-9. Envia o relatório automaticamente para o WhatsApp configurado utilizando a **Evolution API** (`WhatsAppService`).
+1. Atualiza o estado da execução no rastreador (`RelatorioExecucaoTrackerService`) para `EM_PROGRESSO`.
+2. Inicia uma instância do navegador Google Chrome em modo invisível (`headless`) via Selenium WebDriver, contando com algoritmo de tentativas automáticas no login.
+3. Faz login no sistema Church utilizando as credenciais configuradas.
+4. Avalia o período da semana (de segunda-feira a domingo). Caso a semana cruze a virada do mês (ex: 29 de junho a 05 de julho), o `RelatorioSemanalService` executa consultas dia a dia para contornar limitações do formulário externo e garantir a extração completa dos dados.
+5. Executa seleções atômicas de formulários via JavaScript (`selecionarOpcoesDeFormaAtomica`) para garantir que os seletores reativos do sistema sejam preenchidos sem perda de contexto ou erros de elemento desatualizado.
+6. Navega pela paginação de resultados (`clicarProximaPaginaSeExistir`) para extrair todos os registros de membros, congregados e casamentos (incluindo a congregação).
+7. Ordena todas as listas cronologicamente a partir de segunda-feira.
+8. Normaliza a ordem dos nomes dos cônjuges para eliminar casais duplicados nos aniversários de casamento.
+9. Gera um **arquivo PDF consolidado** (`PdfService`) na pasta dedicada `relatorios/` com tabelas de 4 colunas, repetição de cabeçalho entre páginas e formatação limpa.
+10. Envia o relatório automaticamente para o WhatsApp configurado utilizando a **Evolution API** (`WhatsAppService`).
+11. Atualiza o status no rastreador para `SUCESSO` (ou `ERRO` com detalhes) e encerra com segurança o Chrome driver no bloco `finally`.
+12. Executa a limpeza automática (`RelatorioLimpezaService`) de relatórios antigos na pasta `relatorios/` além do prazo de retenção (padrão: 30 dias).
 
 ---
 
@@ -64,13 +67,15 @@ src/
     ├── java/
     │   └── com/github/josiasdev/RelatorioAniversariantes/
     │       ├── config/         # Configurações globais (CORS, Swagger UI, Segurança)
-    │       ├── controller/     # Endpoints da API REST e documentação Swagger
+    │       ├── controller/     # Endpoints da API REST (/relatorios/gerarAniversariantes & /relatorios/status)
     │       ├── dto/            # Objetos de Transferência de Dados (AniversarianteDTO, CasamentoDTO, DadosRelatorioDTO)
     │       ├── service/        # Lógica de negócio e orquestração
     │       │   ├── RelatorioAniversariantesService.java # Fluxo principal e tarefas agendadas (@Scheduled)
+    │       │   ├── RelatorioExecucaoTrackerService.java # Monitoramento de status em tempo real
+    │       │   ├── RelatorioLimpezaService.java         # Limpeza agendada de relatórios antigos
     │       │   ├── RelatorioSemanalService.java         # Cálculo de datas e busca por transição de mês
     │       │   ├── WebScraperService.java               # Scraping Selenium, seleção via JS e paginação
-    │       │   ├── PdfService.java                      # Design do PDF, tabelas de 4 colunas e quebra de páginas
+    │       │   ├── PdfService.java                      # Design do PDF, tabelas de 4 colunas e saída em relatorios/
     │       │   └── WhatsAppService.java                 # Envio do arquivo PDF via Evolution API
     │       └── RelatorioAniversariantesApplication.java  # Classe principal da aplicação Spring Boot
     └── resources/
@@ -113,8 +118,6 @@ A API do WhatsApp estará pronta na porta `8081`.
 3. Abra a instância criada e clique em **CONECTAR**.
 4. Escaneie o **QR Code** pelo WhatsApp do celular (**Configurações > Dispositivos Conectados > Conectar dispositivo**).
 
-Pronto! A sua aplicação Spring Boot já tem permissão para enviar os PDFs de forma autônoma.
-
 ---
 
 ### 🚀 Como Executar o Projeto
@@ -143,6 +146,10 @@ whatsapp.api.url=http://localhost:8081/message/sendMedia/igreja
 whatsapp.api.key=SUA_CHAVE_SUPER_SECRETA_AQUI
 # Número do destinatário (Código do país + DDD + Número)
 whatsapp.destinatario=5585999999999
+
+# --- PASTA E RETENÇÃO DE RELATÓRIOS ---
+app.reports.output-directory=relatorios
+app.reports.retention-days=30
 ```
 
 #### 3. Compilar e Executar
@@ -150,7 +157,7 @@ whatsapp.destinatario=5585999999999
 Na raiz do projeto:
 
 ```bash
-# Compilar o projeto e executar testes
+# Compilar o projeto e executar testes unitários e de integração
 mvn clean package
 
 # Executar a aplicação
@@ -159,28 +166,46 @@ java -jar target/RelatorioAniversariantes-0.0.1-SNAPSHOT.jar
 
 ---
 
-### 🕹️ Disparo Manual via Swagger UI
+### 🕹️ Disparo Manual e Monitoramento em Tempo Real via Swagger UI
 
-O sistema roda automaticamente toda segunda-feira às **08:00** (fuso `America/Fortaleza`). Você também pode dispará-lo manualmente:
+O sistema roda automaticamente toda segunda-feira às **08:00** (fuso `America/Fortaleza`). Você também pode interagir via Swagger UI:
 
-1. Acesse o Swagger UI no navegador: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-2. Expanda a rota `GET /relatorios/gerarAniversariantes`.
-3. Clique em **Try it out** e depois em **Execute**.
-4. O servidor retornará status `202 Accepted` e executará o relatório em segundo plano.
+👉 [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
-Ao finalizar, o arquivo `relatorio_aniversariantes_ANO-MES-DIA.pdf` será salvo na raiz do projeto e enviado para o WhatsApp!
+1. **Disparar Relatório**: Execute o endpoint `GET /relatorios/gerarAniversariantes`. O servidor responde imediatamente com `202 Accepted`.
+2. **Consultar Status**: Execute o endpoint `GET /relatorios/status`. O servidor retorna o estado detalhado em formato JSON:
+   ```json
+   {
+     "status": "SUCESSO",
+     "mensagem": "Relatório gerado com sucesso (relatorios/relatorio_aniversariantes_2026-08-09.pdf)...",
+     "inicioExecucao": "2026-08-09T16:00:00",
+     "fimExecucao": "2026-08-09T16:00:15",
+     "duracaoSegundos": 15,
+     "arquivoGerado": "relatorios/relatorio_aniversariantes_2026-08-09.pdf",
+     "totais": {
+       "membros": 12,
+       "congregados": 5,
+       "casamentos": 3
+     }
+   }
+   ```
+
+Ao finalizar, o arquivo `relatorios/relatorio_aniversariantes_ANO-MES-DIA.pdf` é gravado na pasta `relatorios/` e enviado pelo WhatsApp!
 
 ---
 
 ### 🧪 Testes Automatizados
 
-Para rodar os testes unitários via Maven:
+Para rodar a suíte de testes automatizados via Maven:
 
 ```bash
 mvn test
 ```
 
-Os testes unitários validam a lógica de período semanal em viradas de mês, a ordenação cronológica e a desduplicação de casais no `RelatorioSemanalServiceTest`.
+Os testes cobrem:
+* Período semanal em viradas de mês e ordenação cronológica (`RelatorioSemanalServiceTest`)
+* Transições de estado do rastreador de execução (`RelatorioExecucaoTrackerServiceTest`)
+* Endpoints REST da API via MockMvc (`RelatorioAniversariantesControllerTest`)
 
 ---
 

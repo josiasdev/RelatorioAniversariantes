@@ -79,12 +79,21 @@ public class WebScraperService {
 
     private void realizarLogin(WebDriver driver, WebDriverWait wait) {
         System.out.println("Acessando a página de login...");
-        driver.get("https://church15.churchsoftware.com.br/frmlogin/");
-        wait.until(ExpectedConditions.presenceOfElementLocated(By.id("codcliente"))).sendKeys(clientCode);
-        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[contains(text(), 'Próximo')]"))).click();
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("username"))).sendKeys(username);
-        driver.findElement(By.id("password")).sendKeys(password);
-        driver.findElement(By.xpath("//button[contains(text(), 'Entrar')]")).click();
+        for (int tentativa = 1; tentativa <= 3; tentativa++) {
+            try {
+                driver.get("https://church15.churchsoftware.com.br/frmlogin/");
+                wait.until(ExpectedConditions.presenceOfElementLocated(By.id("codcliente"))).sendKeys(clientCode);
+                wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[contains(text(), 'Próximo')]"))).click();
+                wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("username"))).sendKeys(username);
+                driver.findElement(By.id("password")).sendKeys(password);
+                driver.findElement(By.xpath("//button[contains(text(), 'Entrar')]")).click();
+                return;
+            } catch (Exception e) {
+                System.err.printf("Tentativa %d/3 de login falhou: %s%n", tentativa, e.getMessage());
+                if (tentativa == 3) throw e;
+                try { TimeUnit.SECONDS.sleep(2); } catch (InterruptedException ignored) {}
+            }
+        }
     }
 
     private void navegarPara(WebDriver driver, String url) throws InterruptedException {

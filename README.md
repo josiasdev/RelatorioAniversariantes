@@ -7,7 +7,7 @@ Read this in other languages: [Português](README_pt_BR.md)
 ![Selenium](https://img.shields.io/badge/Selenium-WebDriver-blue.svg)
 ![Status](https://img.shields.io/badge/Status-Completed-success.svg)
 
-This application automates the generation and delivery of weekly church reports for member birthdays, congregant birthdays, and wedding anniversaries. By leveraging headless web automation, intelligent date range handling, PDF rendering, and WhatsApp integration, it removes manual administrative tasks.
+This application automates the generation and delivery of weekly church reports for member birthdays, congregant birthdays, and wedding anniversaries. By leveraging headless web automation, intelligent date range handling, PDF rendering, execution tracking, and WhatsApp integration, it removes manual administrative tasks.
 
 The application automatically categorizes members, congregants, and wedding anniversaries, grouping entries by congregation and headquarters.
 
@@ -30,15 +30,18 @@ Church is a comprehensive cloud-based church management system used across Brazi
 
 When triggered manually via API or automatically by the cron scheduler:
 
-1. Launches a headless Google Chrome browser instance via Selenium WebDriver.
-2. Authenticates into the church management system using configured credentials.
-3. Evaluates the week date range (Monday through Sunday). If a week crosses a month boundary (e.g. June 29 to July 5), it performs day-by-day queries to ensure complete data extraction.
-4. Uses atomic JavaScript execution (`selecionarOpcoesDeFormaAtomica`) to reliably select all form dropdown values across complex reactive UI components.
-5. Navigates multi-page table result pagination (`clicarProximaPaginaSeExistir`) to extract all member, congregant, and wedding anniversary entries (including congregation info).
-6. Sorts all entries chronologically starting from Monday.
-7. Normalizes spouse name ordering to remove duplicate wedding anniversary couples.
-8. Generates a formatted **PDF document** (`PdfService`) with multi-page table splitting, repeated table headers, and custom design layouts.
-9. Automatically sends the PDF file to a designated WhatsApp recipient using **Evolution API** (`WhatsAppService`).
+1. Updates the execution tracker status (`RelatorioExecucaoTrackerService`) to `EM_PROGRESSO`.
+2. Launches a headless Google Chrome browser instance via Selenium WebDriver with automated login retry logic.
+3. Authenticates into the church management system using configured credentials.
+4. Evaluates the current week date range (Monday through Sunday). If a week crosses a month boundary (e.g. June 29 to July 5), it performs day-by-day queries to ensure complete data extraction.
+5. Uses atomic JavaScript execution (`selecionarOpcoesDeFormaAtomica`) to reliably select all form dropdown values across complex reactive UI components.
+6. Navigates multi-page table result pagination (`clicarProximaPaginaSeExistir`) to extract all member, congregant, and wedding anniversary entries (including congregation info).
+7. Sorts all entries chronologically starting from Monday.
+8. Normalizes spouse name ordering to remove duplicate wedding anniversary couples.
+9. Generates a formatted **PDF document** (`PdfService`) in a dedicated folder (`relatorios/`) with multi-page table splitting, repeated table headers, and custom design layouts.
+10. Automatically sends the PDF file to a designated WhatsApp recipient using **Evolution API** (`WhatsAppService`).
+11. Updates the execution status to `SUCESSO` (or `ERRO` with details) and safely closes the Chrome driver in a `finally` block.
+12. Automatically purges old reports (`RelatorioLimpezaService`) beyond configured retention threshold (default: 30 days).
 
 ---
 
@@ -64,13 +67,15 @@ src/
     ├── java/
     │   └── com/github/josiasdev/RelatorioAniversariantes/
     │       ├── config/         # Global configuration (CORS, OpenAPI/Swagger, Security)
-    │       ├── controller/     # REST API endpoints & Swagger documentation
+    │       ├── controller/     # REST API endpoints (/relatorios/gerarAniversariantes & /relatorios/status)
     │       ├── dto/            # Data Transfer Objects (AniversarianteDTO, CasamentoDTO, DadosRelatorioDTO)
     │       ├── service/        # Core business logic & orchestration
     │       │   ├── RelatorioAniversariantesService.java # Primary workflow & scheduled tasks
+    │       │   ├── RelatorioExecucaoTrackerService.java # Real-time execution status tracking
+    │       │   ├── RelatorioLimpezaService.java         # PDF retention cleanup scheduled job
     │       │   ├── RelatorioSemanalService.java         # Week calculation & cross-month data collection
-    │       │   ├── WebScraperService.java               # Selenium scraping, atomic form select & pagination
-    │       │   ├── PdfService.java                      # PDF design, 4-column tables & page split logic
+    │       │   ├── WebScraperService.java               # Selenium scraping, atomic JS select & pagination
+    │       │   ├── PdfService.java                      # PDF design, 4-column tables & relatorios/ output
     │       │   └── WhatsAppService.java                 # Evolution API WhatsApp file dispatcher
     │       └── RelatorioAniversariantesApplication.java  # Main application entry point
     └── resources/
@@ -113,8 +118,6 @@ The WhatsApp API service will start on port `8081`.
 3. Open the created instance and click **CONNECT**.
 4. Scan the generated QR code using WhatsApp on your phone (**Settings > Linked Devices > Link a Device**).
 
-Once connected, your Spring Boot service can autonomously dispatch report PDFs to WhatsApp!
-
 ---
 
 ### 🚀 Getting Started
@@ -143,6 +146,10 @@ whatsapp.api.url=http://localhost:8081/message/sendMedia/igreja
 whatsapp.api.key=YOUR_SUPER_SECRET_KEY_HERE
 # Recipient phone number (Country code + Area code + Number)
 whatsapp.destinatario=5585999999999
+
+# --- REPORT STORAGE & RETENTION ---
+app.reports.output-directory=relatorios
+app.reports.retention-days=30
 ```
 
 #### 3. Build & Run
@@ -150,7 +157,7 @@ whatsapp.destinatario=5585999999999
 From the project root:
 
 ```bash
-# Compile and run tests
+# Compile and run unit & integration tests
 mvn clean package
 
 # Run application
@@ -159,28 +166,46 @@ java -jar target/RelatorioAniversariantes-0.0.1-SNAPSHOT.jar
 
 ---
 
-### 🕹️ Manual API Triggering & Swagger UI
+### 🕹️ Manual API Triggering & Real-Time Status Monitoring
 
-The report generation task runs automatically every Monday at **08:00 AM** (`America/Fortaleza` timezone). You can also trigger it manually:
+The report generation task runs automatically every Monday at **08:00 AM** (`America/Fortaleza` timezone). You can also interact via Swagger UI:
 
-1. Open Swagger UI in your browser: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-2. Expand `GET /relatorios/gerarAniversariantes`.
-3. Click **Try it out** and then **Execute**.
-4. The API returns `202 Accepted` and processes the report asynchronously.
+👉 [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
-Upon completion, the PDF file `relatorio_aniversariantes_YYYY-MM-DD.pdf` is saved in the root folder and sent to your configured WhatsApp number.
+1. **Trigger Report**: Execute `GET /relatorios/gerarAniversariantes`. Returns HTTP `202 Accepted` immediately.
+2. **Monitor Status**: Execute `GET /relatorios/status`. Returns real-time JSON metrics:
+   ```json
+   {
+     "status": "SUCESSO",
+     "mensagem": "Relatório gerado com sucesso (relatorios/relatorio_aniversariantes_2026-08-09.pdf)...",
+     "inicioExecucao": "2026-08-09T16:00:00",
+     "fimExecucao": "2026-08-09T16:00:15",
+     "duracaoSegundos": 15,
+     "arquivoGerado": "relatorios/relatorio_aniversariantes_2026-08-09.pdf",
+     "totais": {
+       "membros": 12,
+       "congregados": 5,
+       "casamentos": 3
+     }
+   }
+   ```
+
+Upon completion, the PDF file `relatorios/relatorio_aniversariantes_YYYY-MM-DD.pdf` is generated and sent to your configured WhatsApp number.
 
 ---
 
 ### 🧪 Running Automated Tests
 
-Run unit tests via Maven:
+Run unit and integration test suite via Maven:
 
 ```bash
 mvn test
 ```
 
-Unit tests verify multi-month week date logic, chronological day sorting, and couple deduplication algorithms in `RelatorioSemanalServiceTest`.
+Unit tests cover:
+* Multi-month week boundary logic & chronological sorting (`RelatorioSemanalServiceTest`)
+* Execution tracker status transitions and JSON payload generation (`RelatorioExecucaoTrackerServiceTest`)
+* REST API endpoints with MockMvc (`RelatorioAniversariantesControllerTest`)
 
 ---
 

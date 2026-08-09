@@ -8,11 +8,16 @@ import com.lowagie.text.Font;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.awt.*;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -22,11 +27,20 @@ import org.springframework.core.io.ClassPathResource;
 @Service
 public class PdfService {
 
-    public void gerarRelatorioPdf(String nomeArquivo, DadosRelatorioDTO dados, LocalDate inicio, LocalDate fim) throws IOException {
+    @Value("${app.reports.output-directory:relatorios}")
+    private String outputDirectory;
+
+    public String gerarRelatorioPdf(String nomeArquivo, DadosRelatorioDTO dados, LocalDate inicio, LocalDate fim) throws IOException {
+        Path pastaDestino = Paths.get(outputDirectory);
+        if (!Files.exists(pastaDestino)) {
+            Files.createDirectories(pastaDestino);
+        }
+
+        Path caminhoArquivo = pastaDestino.resolve(Paths.get(nomeArquivo).getFileName());
         Document document = new Document(PageSize.A4);
 
         try {
-            PdfWriter.getInstance(document, new FileOutputStream(nomeArquivo));
+            PdfWriter.getInstance(document, new FileOutputStream(caminhoArquivo.toFile()));
             document.open();
 
             adicionarCabecalho(document);
@@ -44,6 +58,8 @@ public class PdfService {
             if (dados.getCasamentos() != null && !dados.getCasamentos().isEmpty()) {
                 adicionarTabelaCasamentos(document, "Aniversariantes de Casamento - " + periodo, dados.getCasamentos());
             }
+
+            return caminhoArquivo.toString();
 
         } catch (DocumentException e) {
             throw new IOException("Erro ao gerar PDF: " + e.getMessage(), e);
