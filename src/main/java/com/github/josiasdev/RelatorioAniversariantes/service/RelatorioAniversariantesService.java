@@ -15,12 +15,12 @@ import java.util.*;
 @Service
 public class RelatorioAniversariantesService {
 
-    private final WebScraperService webScraperService;
+    private final RelatorioSemanalService relatorioSemanalService;
     private final PdfService pdfService;
     private final WhatsAppService whatsAppService;
 
-    public RelatorioAniversariantesService(WebScraperService webScraperService, PdfService pdfService, WhatsAppService whatsAppService) {
-        this.webScraperService = webScraperService;
+    public RelatorioAniversariantesService(RelatorioSemanalService relatorioSemanalService, PdfService pdfService, WhatsAppService whatsAppService) {
+        this.relatorioSemanalService = relatorioSemanalService;
         this.pdfService = pdfService;
         this.whatsAppService = whatsAppService;
     }
@@ -36,17 +36,12 @@ public class RelatorioAniversariantesService {
 
             System.out.println("Iniciando extração geral...");
 
-            DadosRelatorioDTO todosOsDados = webScraperService.extrairTodosOsDados(startOfWeek, endOfWeek);
-
-            todosOsDados.getMembros().sort(Comparator.comparingInt(a -> Integer.parseInt(a.getDia())));
-
-            todosOsDados.getCongregados().sort(Comparator.comparingInt(a -> Integer.parseInt(a.getDia())));
-
-            todosOsDados.getCasamentos().sort(Comparator.comparingInt(a -> Integer.parseInt(a.getDia())));
+            DadosRelatorioDTO todosOsDados = relatorioSemanalService.extrairDadosDaSemana(startOfWeek, endOfWeek);
 
             if (todosOsDados.getCasamentos() != null) {
                 List<CasamentoDTO> casamentosUnicos = removerCasaisRepetidos(todosOsDados.getCasamentos());
                 todosOsDados.setCasamentos(casamentosUnicos);
+                relatorioSemanalService.ordenarDadosPorSemana(todosOsDados, startOfWeek);
             }
 
             String filename = "relatorio_aniversariantes_" + dataFormatada + ".pdf";

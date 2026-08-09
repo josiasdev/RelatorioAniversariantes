@@ -11,4 +11,5 @@ public class CasamentoDTO {
     private String dia;
     private String casal;
     private String dataCasamento;
+    private String congregacao;
 }

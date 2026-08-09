@@ -88,6 +88,9 @@ public class PdfService {
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
         table.setWidths(new float[]{1f, 5f, 1.5f, 4f});
+        table.setHeaderRows(1);
+        table.setSplitRows(true);
+        table.setSplitLate(false);
 
         adicionarCabecalhoTabela(table, "DIA", "NOME", "IDADE", "CONGREGAÇÃO");
 
@@ -109,17 +112,21 @@ public class PdfService {
         pTitulo.setSpacingAfter(10f);
         document.add(pTitulo);
 
-        PdfPTable table = new PdfPTable(3);
+        PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{1f, 6f, 3f});
+        table.setWidths(new float[]{1f, 5f, 2.5f, 3.5f});
+        table.setHeaderRows(1);
+        table.setSplitRows(true);
+        table.setSplitLate(false);
 
-        adicionarCabecalhoTabela(table, "DIA", "CASAL", "DATA CASAMENTO");
+        adicionarCabecalhoTabela(table, "DIA", "CASAL", "DATA CASAMENTO", "CONGREGAÇÃO");
 
         Font fontDados = FontFactory.getFont(FontFactory.HELVETICA, 10);
         for (CasamentoDTO cas : lista) {
             table.addCell(criarCelula(cas.getDia(), fontDados, Element.ALIGN_CENTER));
             table.addCell(criarCelula(cas.getCasal(), fontDados, Element.ALIGN_LEFT));
             table.addCell(criarCelula(cas.getDataCasamento(), fontDados, Element.ALIGN_CENTER));
+            table.addCell(criarCelula(cas.getCongregacao() != null ? cas.getCongregacao() : "", fontDados, Element.ALIGN_LEFT));
         }
 
         document.add(table);

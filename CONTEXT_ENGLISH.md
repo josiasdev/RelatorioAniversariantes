@@ -2,68 +2,57 @@
 
 ## Overview
 
-RelatorioAniversariantes is a Java 17 and Spring Boot application that automates the weekly birthday report workflow for a church. It accesses the Church management platform through browser automation, collects data for members, congregants, and wedding anniversaries, processes the result, generates a consolidated PDF, and sends the document through WhatsApp using a local Evolution API instance.
+RelatorioAniversariantes is a Java 17 and Spring Boot application that automates the weekly birthday and wedding anniversary report workflow for a church. It accesses the Church management platform (specifically at `https://church15.churchsoftware.com.br/frmlogin/`) through browser automation, collects data for members, congregants, and wedding anniversaries, processes the result, generates a consolidated PDF, and sends the document through WhatsApp using a local Evolution API instance.
 
-The project is intended to reduce repetitive manual work and produce a ready-to-share weekly report.
+The project is intended to reduce repetitive manual work and produce a ready-to-share weekly report, distinguishing automatically between members, congregants, and wedding anniversaries, grouped by congregation and headquarters.
 
 ## Main Responsibilities
 
-- Trigger report generation through an HTTP API endpoint.
-- Run the same report generation automatically every Monday at 08:00 in the America/Fortaleza timezone.
+- Trigger report generation through an HTTP API endpoint (`GET /relatorios/gerarAniversariantes`).
+- Run the same report generation automatically every Monday at 08:00 in the America/Fortaleza timezone (`@Scheduled`).
 - Use Selenium WebDriver with headless Chrome to access the external church management system.
-- Extract member birthdays, congregant birthdays, and wedding anniversaries for the current week.
-- Sort report entries by day.
+- Handle cross-month week ranges seamlessly by dividing queries day-by-day when a week spans across two consecutive months.
+- Extract member birthdays, congregant birthdays, and wedding anniversaries for the current week (including congregation details).
+- Sort report entries chronologically relative to the start of the week.
 - Remove duplicated wedding anniversary couples by normalizing spouse order.
-- Generate a formatted PDF with a header image when available.
+- Support multi-page results scraping and dynamic form interactions via JavaScript DOM execution.
+- Generate a formatted PDF with multi-page table splitting and repeated table headers.
 - Send the generated PDF to WhatsApp through Evolution API.
 
 ## Technology Stack
 
-- Java 17
-- Spring Boot 3.5.x
-- Maven
-- Spring Web
-- Spring Scheduling
-- Spring Async
-- Selenium WebDriver
-- WebDriverManager
-- OpenPDF
-- Apache POI
-- SpringDoc OpenAPI / Swagger UI
-- Lombok
-- Docker Compose for the Evolution API service
+- **Java 17** and **Spring Boot 3.5.x**
+- **Maven** (Dependency management)
+- **Spring Web**, **Spring Scheduling**, **Spring Async**
+- **Selenium WebDriver** and **WebDriverManager** (Browser automation)
+- **OpenPDF** (PDF creation and formatting)
+- **Apache POI**
+- **SpringDoc OpenAPI / Swagger UI** (Interactive API documentation)
+- **Lombok** (Boilerplate reduction)
+- **Docker Compose** for the Evolution API service
 
 ## Architecture
 
-The application follows a simple API-oriented MVC/service structure.
+The architecture follows an MVC (Model-View-Controller) pattern adapted for an API, prioritizing the Single Responsibility Principle (SOLID).
 
 ```text
 src/main/java/com/github/josiasdev/RelatorioAniversariantes/
-├── RelatorioAniversariantesApplication.java
-├── config/
-│   └── OpenApiConfig.java
-├── controller/
-│   └── RelatorioAniversariantesController.java
-├── dto/
-│   ├── AniversarianteDTO.java
-│   ├── CasamentoDTO.java
-│   └── DadosRelatorioDTO.java
-└── service/
-    ├── PdfService.java
-    ├── RelatorioAniversariantesService.java
-    ├── WebScraperService.java
-    └── WhatsAppService.java
+├── config/           # Global configurations (CORS, Documentation, Security)
+├── controller/       # API endpoints and documentation
+├── dto/              # Data Transfer Objects (Entity structures)
+└── service/          # Business logic, orchestration, scraping, PDF generation & WhatsApp
 ```
 
-## Main Components
+### Main Components
 
 - `RelatorioAniversariantesApplication`: Spring Boot entry point. Enables async execution and scheduled tasks.
-- `RelatorioAniversariantesController`: exposes the report generation endpoint under `/relatorios`.
-- `RelatorioAniversariantesService`: orchestrates the full workflow: date range calculation, scraping, sorting, de-duplication, PDF generation, and WhatsApp delivery.
-- `WebScraperService`: handles Selenium setup, login, navigation, form filling, and table extraction.
-- `PdfService`: creates the final PDF with sections for members, congregants, and wedding anniversaries.
-- `WhatsAppService`: reads the generated PDF, converts it to Base64, and sends it as a document through Evolution API.
-- DTOs: represent extracted birthday, wedding anniversary, and consolidated report data.
+- `RelatorioAniversariantesController`: exposes the report generation endpoint under `/relatorios`. Validates input and delegates work to services asynchronously.
+- `RelatorioAniversariantesService`: orchestrates the top-level report workflow, triggering scheduled jobs, deduplicating wedding couples, generating the PDF file, and sending it via WhatsApp.
+- `RelatorioSemanalService`: handles date range calculations for weekly reports. If a week crosses a month boundary (e.g., June 29 to July 5), it performs day-by-day queries to avoid missing data, consolidates data sets, and sorts all entries chronologically relative to the week's Monday.
+- `WebScraperService`: handles Selenium setup, login, navigation, atomic form select execution via JavaScript, multi-page pagination navigation, and raw data extraction.
+- `PdfService`: handles document design and formatting. Generates 4-column tables for members, congregants, and marriage anniversaries (including congregation info), configuring page split behavior and repeated table headers.
+- `WhatsAppService`: reads the generated PDF, converts it to Base64, and sends it as a document through Evolution API with robust error handling.
+- DTOs (`AniversarianteDTO`, `CasamentoDTO`, `DadosRelatorioDTO`): represent extracted birthday, wedding anniversary (including congregation), and consolidated report data.
 
 ## API
 
@@ -74,86 +63,57 @@ GET /relatorios/gerarAniversariantes
 ```
 
 Expected behavior:
-
 - Returns HTTP `202 Accepted` when the process starts.
 - Runs the report generation asynchronously.
 - Writes the generated PDF to the project root using this naming pattern:
-
-```text
-relatorio_aniversariantes_YYYY-MM-DD.pdf
-```
+  `relatorio_aniversariantes_YYYY-MM-DD.pdf`
 
 Swagger UI is available when the application is running:
-
-```text
-http://localhost:8080/swagger-ui.html
-```
+`http://localhost:8080/swagger-ui.html`
 
 ## Runtime Flow
 
-1. Calculate the current week from Monday to Sunday.
+1. Calculate current week range (Monday to Sunday).
 2. Start headless Chrome through Selenium.
-3. Authenticate into the external church management system.
-4. Collect member birthdays for the week.
-5. Collect congregant birthdays for the week.
-6. Collect wedding anniversaries for the week.
-7. Sort all lists by day.
-8. Normalize and remove duplicated wedding anniversary couples.
-9. Generate the final PDF.
-10. Send the PDF through WhatsApp.
-11. Close the browser session.
+3. Authenticate into the external church management system using credentials from `application.properties`.
+4. Fetch data via `RelatorioSemanalService`: single search if within the same month, or day-by-day queries if crossing a month boundary.
+5. `WebScraperService` selects search options via atomic JavaScript execution, handles pagination across multi-page table results, and extracts data including congregation info.
+6. Sort all extracted lists by day relative to the week's Monday.
+7. Normalize spouse name order to remove duplicate wedding anniversary couples.
+8. Generate the final PDF with `PdfService` featuring formatted 4-column tables.
+9. Send the PDF through WhatsApp to the configured number.
+10. Close the browser session.
 
 ## Docker / WhatsApp Integration
 
-The `docker/docker-compose.yml` file starts an Evolution API container on local port `8081`. The API key must be provided through an environment variable or local `.env` file and must not be committed.
+The application integrates with WhatsApp via [Evolution API](https://doc.evolution-api.com/v2/pt/get-started/introduction). 
+
+The `docker/docker-compose.yml` file starts an Evolution API container on local port `8081`. 
+The API key must be provided through a local `.env` file containing `EVOLUTION_API_KEY=...` in the `docker/` directory, which must not be committed.
+
+To connect your number:
+1. Start the container (`docker compose up -d`).
+2. Access the Evolution Manager at `http://localhost:8081/manager`.
+3. Create an instance named `igreja` using the `Baileys` integration and your API key.
+4. Connect the instance by scanning the QR code with your WhatsApp app.
 
 ## Security And Configuration Notes
 
 - Do not document, commit, or expose credentials, API keys, phone numbers, authentication values, or local secret values.
-- Do not copy values from local Spring configuration files into documentation, examples, logs, issues, commits, or pull requests.
-- Keep runtime configuration private and environment-specific.
+- Keep runtime configuration private and environment-specific within `src/main/resources/application.properties` and the `docker/.env` file.
 - Treat generated PDFs as potentially sensitive because they contain personal data.
-
-## Development Commands
-
-Build the project:
-
-```bash
-mvn clean install
-```
-
-Run the packaged application:
-
-```bash
-java -jar target/RelatorioAniversariantes-0.0.1-SNAPSHOT.jar
-```
-
-Run tests:
-
-```bash
-mvn test
-```
-
-Start Evolution API:
-
-```bash
-cd docker
-docker compose up -d
-```
 
 ## Operational Requirements
 
 - Java 17 or newer
 - Maven
-- Google Chrome installed
+- Google Chrome installed on the host operating system
 - Docker, when WhatsApp sending is needed
 - Valid private credentials for the external church management system
 - A configured Evolution API instance connected to WhatsApp
 
 ## Maintenance Notes
 
-- The scraping code depends on the external platform HTML structure. If that platform changes element IDs, table classes, or navigation flow, `WebScraperService` may need updates.
-- The weekly report currently uses the current date to determine the Monday-Sunday range.
-- The scheduled task runs every Monday at 08:00 in the America/Fortaleza timezone.
-- PDF formatting is centralized in `PdfService`.
-- Report delivery is centralized in `WhatsAppService`.
+- **Web Scraping Vulnerability**: The scraping code depends on the external platform HTML structure. If that platform changes element IDs, table classes, or navigation flow, `WebScraperService` will need updates.
+- **Cross-Month Logic**: The `RelatorioSemanalService` handles multi-month week transitions automatically.
+- **Scheduled Task**: The scheduled task runs every Monday at 08:00 in the `America/Fortaleza` timezone.

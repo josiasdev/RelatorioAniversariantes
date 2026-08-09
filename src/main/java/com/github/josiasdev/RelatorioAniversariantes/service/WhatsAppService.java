@@ -71,9 +71,11 @@ public class WhatsAppService {
                 log.error("Falha ao enviar para o WhatsApp. Status: {} | Retorno: {}", response.statusCode(), response.body());
             }
 
-        } catch (IOException | InterruptedException e) {
-            log.error("Erro ao tentar processar e enviar o PDF: {}", e.getMessage());
-            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            log.error("Erro ao tentar processar e enviar o PDF", e);
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }
