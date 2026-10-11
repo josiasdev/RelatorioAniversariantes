@@ -3,6 +3,7 @@ package com.github.josiasdev.RelatorioAniversariantes.service;
 import com.github.josiasdev.RelatorioAniversariantes.dto.AniversarianteDTO;
 import com.github.josiasdev.RelatorioAniversariantes.dto.CasamentoDTO;
 import com.github.josiasdev.RelatorioAniversariantes.dto.DadosRelatorioDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+@Slf4j
 @Service
 public class RelatorioSemanalService {
 
@@ -71,7 +73,7 @@ public class RelatorioSemanalService {
     }
 
     private void extrairEAdicionarDados(DadosRelatorioDTO dadosConsolidados, LocalDate inicio, LocalDate fim) throws InterruptedException {
-        System.out.printf("Extraindo periodo semanal: %s a %s%n", inicio, fim);
+        log.info("Extraindo periodo semanal: {} a {}", inicio, fim);
         DadosRelatorioDTO dadosPeriodo = webScraperService.extrairTodosOsDados(inicio, fim);
         logarTotaisPeriodo(inicio, fim, dadosPeriodo);
         adicionarDados(dadosConsolidados, dadosPeriodo);
@@ -79,12 +81,12 @@ public class RelatorioSemanalService {
 
     private void logarTotaisPeriodo(LocalDate inicio, LocalDate fim, DadosRelatorioDTO dados) {
         if (dados == null) {
-            System.out.printf("Periodo %s a %s sem dados retornados.%n", inicio, fim);
+            log.info("Periodo {} a {} sem dados retornados.", inicio, fim);
             return;
         }
 
-        System.out.printf(
-                "Periodo %s a %s retornou: %d membros, %d congregados, %d casamentos.%n",
+        log.info(
+                "Periodo {} a {} retornou: {} membros, {} congregados, {} casamentos.",
                 inicio,
                 fim,
                 contar(dados.getMembros()),

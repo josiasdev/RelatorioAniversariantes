@@ -80,7 +80,7 @@ Swagger UI is available when the application is running:
 1. Calculate current week range (Monday to Sunday).
 2. Update tracker state to `EM_PROGRESSO`.
 3. Start headless Chrome through Selenium with login retry logic.
-4. Authenticate into the external church management system using credentials from `application.properties`.
+4. Authenticate into the external church management system using credentials provided via environment variables (see `.env.example`).
 5. Fetch data via `RelatorioSemanalService`: single search if within the same month, or day-by-day queries if crossing a month boundary.
 6. `WebScraperService` selects search options via atomic JavaScript execution, handles pagination across multi-page table results, and extracts data including congregation info.
 7. Sort all extracted lists by day relative to the week's Monday.
@@ -106,7 +106,7 @@ To connect your number:
 ## Security And Configuration Notes
 
 - Do not document, commit, or expose credentials, API keys, phone numbers, authentication values, or local secret values.
-- Keep runtime configuration private and environment-specific within `src/main/resources/application.properties` and the `docker/.env` file.
+- Church and Evolution API credentials are provided exclusively through environment variables (see `.env.example`); `application.properties` only references `${CHURCH_PASSWORD:}` and similar placeholders with an empty default.
 - Treat generated PDFs as potentially sensitive because they contain personal data.
 
 ## Operational Requirements

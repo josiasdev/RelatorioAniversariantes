@@ -1,9 +1,13 @@
 package com.github.josiasdev.RelatorioAniversariantes.service;
 
+import com.github.josiasdev.RelatorioAniversariantes.config.ScraperProperties;
 import com.github.josiasdev.RelatorioAniversariantes.dto.AniversarianteDTO;
 import com.github.josiasdev.RelatorioAniversariantes.dto.CasamentoDTO;
 import com.github.josiasdev.RelatorioAniversariantes.dto.DadosRelatorioDTO;
 import io.github.bonigarcia.wdm.WebDriverManager;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryRegistry;
+import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.StaleElementReferenceException;
@@ -25,9 +29,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class WebScraperService {
     private static final int MAX_TENTATIVAS_SELECAO = 3;
@@ -35,12 +40,27 @@ public class WebScraperService {
     private static final By CAMPO_CONGREGACOES_ANIVERSARIANTES = By.id("id_sc_field_congregacao");
     private static final By CAMPO_CONGREGACOES_CASAMENTOS = By.id("SC_tblcongregacoes_nome");
 
-    @Value("${app.credentials.client-code}")
-    private String clientCode;
-    @Value("${app.credentials.username}")
-    private String username;
-    @Value("${app.credentials.password}")
-    private String password;
+    private final String clientCode;
+    private final String username;
+    private final String password;
+    private final ScraperProperties scraperProperties;
+    private final Retry loginRetry;
+
+    public WebScraperService(
+            @Value("${app.credentials.client-code}") String clientCode,
+            @Value("${app.credentials.username}") String username,
+            @Value("${app.credentials.password}") String password,
+            ScraperProperties scraperProperties,
+            RetryRegistry retryRegistry) {
+        this.clientCode = clientCode;
+        this.username = username;
+        this.password = password;
+        this.scraperProperties = scraperProperties;
+        this.loginRetry = retryRegistry.retry("login");
+
+        this.loginRetry.getEventPublisher().onError(event ->
+                log.warn("Tentativa de login no Church falhou: {}", event.getLastThrowable().getMessage()));
+    }
 
     public DadosRelatorioDTO extrairTodosOsDados(LocalDate startOfWeek, LocalDate endOfWeek) throws InterruptedException {
         WebDriverManager.chromedriver().setup();
@@ -54,57 +74,73 @@ public class WebScraperService {
 
         WebDriver driver = new ChromeDriver(options);
         try {
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(100));
-            realizarLogin(driver, wait);
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(scraperProperties.getWaitSeconds()));
+            realizarLoginComRetry(driver, wait);
 
-            navegarPara(driver, "https://church15.churchsoftware.com.br/ctrtipoaniversario/ctrtipoaniversario.php");
+            navegarPara(driver, scraperProperties.getUrls().getAniversarios());
             preencherEBuscarAniversariantes(driver, wait, startOfWeek, endOfWeek, "Membros");
             List<AniversarianteDTO> membros = extrairTabelaAniversariantes(driver);
 
-            navegarPara(driver, "https://church15.churchsoftware.com.br/ctrtipoaniversario/ctrtipoaniversario.php");
+            navegarPara(driver, scraperProperties.getUrls().getAniversarios());
             preencherEBuscarAniversariantes(driver, wait, startOfWeek, endOfWeek, "Congregados");
             List<AniversarianteDTO> congregados = extrairTabelaAniversariantes(driver);
 
-            navegarPara(driver, "https://church15.churchsoftware.com.br/rptCasaAniv/rptCasaAniv.php");
+            navegarPara(driver, scraperProperties.getUrls().getCasamentos());
             preencherEBuscarCasamentos(driver, wait, startOfWeek, endOfWeek);
             List<CasamentoDTO> casamentos = extrairTabelaCasamentos(driver);
 
             return new DadosRelatorioDTO(membros, congregados, casamentos);
 
         } finally {
-            System.out.println("Processo finalizado. Fechando o navegador...");
+            log.info("Processo finalizado. Fechando o navegador...");
             driver.quit();
         }
     }
 
-    private void realizarLogin(WebDriver driver, WebDriverWait wait) {
-        System.out.println("Acessando a página de login...");
-        for (int tentativa = 1; tentativa <= 3; tentativa++) {
-            try {
-                driver.get("https://church15.churchsoftware.com.br/frmlogin/");
-                wait.until(ExpectedConditions.presenceOfElementLocated(By.id("codcliente"))).sendKeys(clientCode);
-                wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[contains(text(), 'Próximo')]"))).click();
-                wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("username"))).sendKeys(username);
-                driver.findElement(By.id("password")).sendKeys(password);
-                driver.findElement(By.xpath("//button[contains(text(), 'Entrar')]")).click();
-                return;
-            } catch (Exception e) {
-                System.err.printf("Tentativa %d/3 de login falhou: %s%n", tentativa, e.getMessage());
-                if (tentativa == 3) throw e;
-                try { TimeUnit.SECONDS.sleep(2); } catch (InterruptedException ignored) {}
-            }
+    private void realizarLoginComRetry(WebDriver driver, WebDriverWait wait) throws InterruptedException {
+        Callable<String> tentativaDecorada = Retry.decorateCallable(loginRetry, () -> {
+            realizarLogin(driver, wait);
+            return "ok";
+        });
+
+        try {
+            tentativaDecorada.call();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Login no sistema Church falhou após as tentativas de retry.", e);
         }
     }
 
+    private void realizarLogin(WebDriver driver, WebDriverWait wait) {
+        log.info("Acessando a página de login...");
+        driver.get(scraperProperties.getUrls().getLogin());
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.id("codcliente"))).sendKeys(clientCode);
+        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[contains(text(), 'Próximo')]"))).click();
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("username"))).sendKeys(username);
+        driver.findElement(By.id("password")).sendKeys(password);
+        driver.findElement(By.xpath("//button[contains(text(), 'Entrar')]")).click();
+        log.info("Credenciais enviadas com sucesso.");
+    }
+
     private void navegarPara(WebDriver driver, String url) throws InterruptedException {
-        System.out.println("Navegando para: " + url);
-        TimeUnit.SECONDS.sleep(2);
+        log.info("Navegando para: {}", url);
+        dormir(scraperProperties.getSleepMillisNavigation());
         driver.get(url);
-        TimeUnit.SECONDS.sleep(2);
+        dormir(scraperProperties.getSleepMillisNavigation());
+    }
+
+    private void dormir(long millis) throws InterruptedException {
+        if (millis > 0) {
+            Thread.sleep(millis);
+        }
     }
 
     private void preencherEBuscarAniversariantes(WebDriver driver, WebDriverWait wait, LocalDate startOfWeek, LocalDate endOfWeek, String tipoRelatorio) throws InterruptedException {
-        System.out.println("Buscando Aniversariantes de: " + tipoRelatorio);
+        log.info("Buscando Aniversariantes de: {}", tipoRelatorio);
         WebElement selectTipo = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("id_sc_field_tipo")));
         new Select(selectTipo).selectByVisibleText(tipoRelatorio);
         wait.until(ExpectedConditions.elementToBeClickable(By.id("sc_OK_bot"))).click();
@@ -123,7 +159,7 @@ public class WebScraperService {
     }
 
     private void preencherEBuscarCasamentos(WebDriver driver, WebDriverWait wait, LocalDate startOfWeek, LocalDate endOfWeek) throws InterruptedException {
-        System.out.println("Buscando Aniversariantes de Casamento...");
+        log.info("Buscando Aniversariantes de Casamento...");
 
         aguardarCampoPronto(wait, CAMPO_CONGREGACOES_CASAMENTOS, "congregacoes de casamento");
         selecionarTodasOpcoesValidas(driver, wait, CAMPO_CONGREGACOES_CASAMENTOS, "congregacoes de casamento");
@@ -138,7 +174,7 @@ public class WebScraperService {
         WebElement situacaoElement = driver.findElement(By.id("SC_tblmembros_situacaomembro"));
         new Select(situacaoElement).selectByVisibleText("Ativo");
 
-        System.out.println("Clicando no botão de Pesquisa do Casamento...");
+        log.info("Clicando no botão de Pesquisa do Casamento...");
         wait.until(ExpectedConditions.elementToBeClickable(By.id("sc_b_pesq_bot"))).click();
     }
 
@@ -149,10 +185,10 @@ public class WebScraperService {
 
         int pagina = 1;
         while (pagina <= 100) {
-            TimeUnit.SECONDS.sleep(3);
+            dormir(scraperProperties.getSleepMillisPagination());
             String assinaturaPagina = obterAssinaturaPagina(driver);
             if (!paginasVisitadas.add(assinaturaPagina)) {
-                System.out.println("Pagina repetida detectada em aniversariantes. Encerrando paginacao.");
+                log.warn("Pagina repetida detectada em aniversariantes. Encerrando paginacao.");
                 break;
             }
 
@@ -166,7 +202,7 @@ public class WebScraperService {
                 }
             }
 
-            System.out.printf("Pagina %d de aniversariantes: %d novos registros.%n", pagina, resultados.size() - totalAntes);
+            log.info("Pagina {} de aniversariantes: {} novos registros.", pagina, resultados.size() - totalAntes);
 
             if (!clicarProximaPaginaSeExistir(driver)) {
                 break;
@@ -175,28 +211,28 @@ public class WebScraperService {
             pagina++;
         }
 
-        System.out.println("Total de aniversariantes extraidos: " + resultados.size());
+        log.info("Total de aniversariantes extraidos: {}", resultados.size());
         return resultados;
     }
 
     private List<CasamentoDTO> extrairTabelaCasamentos(WebDriver driver) throws InterruptedException {
-        System.out.println("Extraindo dados da tabela de Casamentos...");
-        List<CasamentoDTO> resultados = new java.util.ArrayList<>();
+        log.info("Extraindo dados da tabela de Casamentos...");
+        List<CasamentoDTO> resultados = new ArrayList<>();
         Set<String> registrosUnicos = new HashSet<>();
         Set<String> paginasVisitadas = new HashSet<>();
 
         int pagina = 1;
         while (pagina <= 100) {
-            TimeUnit.SECONDS.sleep(3);
+            dormir(scraperProperties.getSleepMillisPagination());
             String assinaturaPagina = obterAssinaturaPagina(driver);
             if (!paginasVisitadas.add(assinaturaPagina)) {
-                System.out.println("Pagina repetida detectada em casamentos. Encerrando paginacao.");
+                log.warn("Pagina repetida detectada em casamentos. Encerrando paginacao.");
                 break;
             }
 
             List<WebElement> tbodies = driver.findElements(By.xpath("//tbody[starts-with(@id, 'tbody_rptCasaAniv_')]"));
 
-            String congregacaoAtual = "Sede"; // Valor padrão inicial
+            String congregacaoAtual = "Sede";
             int totalAntes = resultados.size();
 
             for (WebElement tbody : tbodies) {
@@ -208,10 +244,9 @@ public class WebScraperService {
                         WebElement tdCongregacao = tbody.findElement(By.xpath(".//td[contains(@class, 'scGridBlockFont')]//tr[1]/td[3]"));
                         congregacaoAtual = tdCongregacao.getText().replace("&nbsp;", "").trim();
                     } catch (Exception e) {
-                        System.out.println("Aviso: Não encontrou a congregação no bloco _top. Mantendo anterior: " + congregacaoAtual);
+                        log.warn("Não encontrou a congregação no bloco _top. Mantendo anterior: {}", congregacaoAtual);
                     }
                 } else if (id != null && id.endsWith("_bot")) {
-                    // O _bot contém os casais
                     List<WebElement> linhas = tbody.findElements(By.xpath(".//tr[contains(@class, 'scGridFieldOdd') or contains(@class, 'scGridFieldEven')]"));
 
                     for (WebElement linha : linhas) {
@@ -223,7 +258,7 @@ public class WebScraperService {
                 }
             }
 
-            System.out.printf("Pagina %d de casamentos: %d novos registros.%n", pagina, resultados.size() - totalAntes);
+            log.info("Pagina {} de casamentos: {} novos registros.", pagina, resultados.size() - totalAntes);
 
             if (!clicarProximaPaginaSeExistir(driver)) {
                 break;
@@ -232,7 +267,7 @@ public class WebScraperService {
             pagina++;
         }
 
-        System.out.println("Total de casamentos extraidos: " + resultados.size());
+        log.info("Total de casamentos extraidos: {}", resultados.size());
         return resultados;
     }
 
@@ -278,9 +313,9 @@ public class WebScraperService {
         for (By seletor : seletoresProximaPagina) {
             for (WebElement elemento : driver.findElements(seletor)) {
                 if (podeClicarNaProximaPagina(elemento)) {
-                    System.out.println("Avancando para a proxima pagina do resultado...");
+                    log.info("Avancando para a proxima pagina do resultado...");
                     ((JavascriptExecutor) driver).executeScript("arguments[0].click();", elemento);
-                    TimeUnit.SECONDS.sleep(3);
+                    dormir(scraperProperties.getSleepMillisPagination());
                     return true;
                 }
             }
@@ -300,7 +335,7 @@ public class WebScraperService {
                 return false;
             }
         });
-        System.out.printf("Campo de %s carregado.%n", descricao);
+        log.info("Campo de {} carregado.", descricao);
     }
 
     private void selecionarTodasOpcoesValidas(WebDriver driver, WebDriverWait wait, By seletor, String descricao) {
@@ -310,11 +345,11 @@ public class WebScraperService {
             try {
                 WebElement selectElement = wait.until(ExpectedConditions.elementToBeClickable(seletor));
                 long selecionadas = selecionarOpcoesDeFormaAtomica(driver, selectElement);
-                System.out.printf("Selecionadas %d opcoes em %s.%n", selecionadas, descricao);
+                log.info("Selecionadas {} opcoes em {}.", selecionadas, descricao);
                 return;
             } catch (StaleElementReferenceException e) {
                 ultimoErro = e;
-                System.out.printf("Campo %s foi atualizado durante a selecao (tentativa %d de %d). Tentando novamente.%n",
+                log.info("Campo {} foi atualizado durante a selecao (tentativa {} de {}). Tentando novamente.",
                         descricao, tentativa, MAX_TENTATIVAS_SELECAO);
                 aguardarCampoPronto(wait, seletor, descricao);
             }

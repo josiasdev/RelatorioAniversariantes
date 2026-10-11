@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Aniversários de Casamento (fixture de teste)</title>
+</head>
+<body>
+<h1>Aniversários de Casamento</h1>
+
+<label for="SC_tblcongregacoes_nome">Congregações</label>
+<select id="SC_tblcongregacoes_nome" multiple="multiple">
+    <option value="">Selecione</option>
+    <option value="1">Centro</option>
+    <option value="2">Norte</option>
+</select>
+
+<label for="SC_dia">Dia inicial</label>
+<input type="text" id="SC_dia"/>
+<label for="SC_dia_input_2">Dia final</label>
+<input type="text" id="SC_dia_input_2"/>
+
+<label for="SC_mes">Mês</label>
+<select id="SC_mes">
+    <option value="1">Janeiro</option>
+    <option value="2">Fevereiro</option>
+    <option value="3">Março</option>
+    <option value="4">Abril</option>
+    <option value="5">Maio</option>
+    <option value="6">Junho</option>
+    <option value="7">Julho</option>
+    <option value="8">Agosto</option>
+    <option value="9">Setembro</option>
+    <option value="10">Outubro</option>
+    <option value="11">Novembro</option>
+    <option value="12">Dezembro</option>
+</select>
+
+<label for="SC_tblmembros_situacaomembro">Situação</label>
+<select id="SC_tblmembros_situacaomembro">
+    <option value="">Selecione</option>
+    <option value="1">Ativo</option>
+</select>
+
+<button type="button" id="sc_b_pesq_bot">Pesquisar</button>
+
+<table>
+    <tbody id="tbody_rptCasaAniv_1_top">
+        <tr>
+            <td class="scGridBlockFont">
+                <table>
+                    <tr>
+                        <td>1</td>
+                        <td>&nbsp;</td>
+                        <td>Centro</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </tbody>
+    <tbody id="tbody_rptCasaAniv_1_bot">
+        <tr class="scGridFieldOdd">
+            <td>05/10</td>
+            <td>1</td>
+            <td>José &amp; Maria</td>
+            <td>10/05/2010</td>
+        </tr>
+        <tr class="scGridFieldEven">
+            <td>06/10</td>
+            <td>2</td>
+            <td>Ana &amp; Pedro</td>
+            <td>20/06/2015</td>
+        </tr>
+    </tbody>
+    <tbody id="tbody_rptCasaAniv_2_top">
+        <tr>
+            <td class="scGridBlockFont">
+                <table>
+                    <tr>
+                        <td>2</td>
+                        <td>&nbsp;</td>
+                        <td>Norte</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </tbody>
+    <tbody id="tbody_rptCasaAniv_2_bot">
+        <tr class="scGridFieldOdd">
+            <td>08/10</td>
+            <td>1</td>
+            <td>Bia &amp; Léo</td>
+            <td>01/02/2020</td>
+        </tr>
+    </tbody>
+</table>
+</body>
+</html>

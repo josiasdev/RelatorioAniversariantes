@@ -53,6 +53,10 @@ public class RelatorioExecucaoTrackerService {
         this.totalCasamentos = 0;
     }
 
+    public synchronized boolean estaEmAndamento() {
+        return status == Status.EM_PROGRESSO;
+    }
+
     public synchronized void registrarSucesso(String arquivoGerado, int membros, int congregados, int casamentos) {
         this.status = Status.SUCESSO;
         this.fimExecucao = LocalDateTime.now();
