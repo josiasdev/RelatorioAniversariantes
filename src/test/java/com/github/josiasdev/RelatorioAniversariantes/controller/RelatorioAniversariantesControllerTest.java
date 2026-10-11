@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
 
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -34,7 +35,19 @@ class RelatorioAniversariantesControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("Processamento iniciado"));
 
-        verify(relatorioAniversariantesService).gerarRelatorioAniversariantes();
+        verify(relatorioAniversariantesService).gerarRelatorioAssincrono();
+    }
+
+    @Test
+    void deveRetornarConflictQuandoJaHaExecucaoEmAndamento() throws Exception {
+        when(relatorioAniversariantesService.estaEmAndamento()).thenReturn(true);
+
+        mockMvc.perform(get("/relatorios/gerarAniversariantes"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.mensagem").value("Já existe uma geração de relatório em andamento."));
+
+        verify(relatorioAniversariantesService, never()).gerarRelatorioAssincrono();
     }
 
     @Test

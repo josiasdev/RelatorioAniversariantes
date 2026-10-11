@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/ctrtipoaniversario/ctrtipoaniversario.php"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/html; charset=UTF-8"
+    },
+    "bodyFileName": "aniversarios.html"
+  }
+}

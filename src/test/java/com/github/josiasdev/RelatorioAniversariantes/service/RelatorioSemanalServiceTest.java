@@ -124,6 +124,12 @@ class RelatorioSemanalServiceTest {
         private final Map<String, DadosRelatorioDTO> retornos = new HashMap<>();
         private final List<String> chamadas = new ArrayList<>();
 
+        FakeWebScraperService() {
+            super("test-client", "test-user", "test-pass",
+                    new com.github.josiasdev.RelatorioAniversariantes.config.ScraperProperties(),
+                    io.github.resilience4j.retry.RetryRegistry.ofDefaults());
+        }
+
         @Override
         public DadosRelatorioDTO extrairTodosOsDados(LocalDate startOfWeek, LocalDate endOfWeek) {
             String chave = criarChave(startOfWeek, endOfWeek);
