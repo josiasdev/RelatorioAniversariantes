@@ -105,7 +105,7 @@ Passos para conectar o número:
 ## Segurança E Configuração
 
 - Não documentar, commitar ou expor credenciais, chaves de API, números de telefone, valores de autenticação ou segredos locais.
-- Manter as senhas e configurações de disparo seguras nos arquivos locais de configuração Spring (`application.properties`) e no arquivo `.env` do Docker.
+- As credenciais do Church e da Evolution API são fornecidas exclusivamente por variáveis de ambiente (ver `.env.example`); o `application.properties` apenas referencia `${CHURCH_PASSWORD:}` e similares, com fallback vazio.
 - Tratar PDFs gerados como dados sensíveis (contêm informações pessoais).
 
 ## Requisitos Operacionais

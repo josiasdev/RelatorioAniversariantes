@@ -1,5 +1,6 @@
 package com.github.josiasdev.RelatorioAniversariantes.controller;
 
+import com.github.josiasdev.RelatorioAniversariantes.exception.RelatorioEmAndamentoException;
 import com.github.josiasdev.RelatorioAniversariantes.service.RelatorioAniversariantesService;
 import com.github.josiasdev.RelatorioAniversariantes.service.RelatorioExecucaoTrackerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
 import java.util.Map;
 
 @Slf4j
@@ -40,12 +40,17 @@ public class RelatorioAniversariantesController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "202", description = "Processamento iniciado com sucesso."),
+            @ApiResponse(responseCode = "409", description = "Já existe uma geração de relatório em andamento."),
             @ApiResponse(responseCode = "500", description = "Erro interno ao processar a solicitação.")
     })
-    public ResponseEntity<Map<String, String>> gerarRelatorio() throws IOException, InterruptedException {
+    public ResponseEntity<Map<String, String>> gerarRelatorio() {
         log.info("Recebida requisição para gerar relatório unificado de aniversariantes.");
 
-        relatorioAniversariantesService.gerarRelatorioAniversariantes();
+        if (relatorioAniversariantesService.estaEmAndamento()) {
+            throw new RelatorioEmAndamentoException("Já existe uma geração de relatório em andamento.");
+        }
+
+        relatorioAniversariantesService.gerarRelatorioAssincrono();
 
         return ResponseEntity.accepted().body(Map.of(
                 "status", "Processamento iniciado",

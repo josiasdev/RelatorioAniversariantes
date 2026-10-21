@@ -66,9 +66,10 @@ src/
 └── main/
     ├── java/
     │   └── com/github/josiasdev/RelatorioAniversariantes/
-    │       ├── config/         # Global configuration (CORS, OpenAPI/Swagger, Security)
+    │       ├── config/         # Global configuration (CORS, OpenAPI/Swagger, Async, scraper properties)
     │       ├── controller/     # REST API endpoints (/relatorios/gerarAniversariantes & /relatorios/status)
     │       ├── dto/            # Data Transfer Objects (AniversarianteDTO, CasamentoDTO, DadosRelatorioDTO)
+    │       ├── exception/      # Business exceptions & GlobalExceptionHandler (409/400)
     │       ├── service/        # Core business logic & orchestration
     │       │   ├── RelatorioAniversariantesService.java # Primary workflow & scheduled tasks
     │       │   ├── RelatorioExecucaoTrackerService.java # Real-time execution status tracking
@@ -129,28 +130,28 @@ The WhatsApp API service will start on port `8081`.
 * **Google Chrome** installed on the host system
 * **Docker** (for WhatsApp delivery via Evolution API)
 
-#### 2. Configure Credentials (`application.properties`)
+#### 2. Configure Credentials (Environment Variables)
 
-Update `src/main/resources/application.properties` with your church credentials and WhatsApp recipient details:
+Credentials **are no longer stored in `application.properties`**. Configure them via environment variables — copy the template and fill it in:
 
-```properties
-spring.application.name=RelatorioAniversariantes
-
-# Church Management Platform Credentials
-app.credentials.client-code=YOUR_CLIENT_CODE
-app.credentials.username=YOUR_USERNAME
-app.credentials.password=YOUR_PASSWORD
-
-# --- WHATSAPP CONFIGURATION (EVOLUTION API) ---
-whatsapp.api.url=http://localhost:8081/message/sendMedia/igreja
-whatsapp.api.key=YOUR_SUPER_SECRET_KEY_HERE
-# Recipient phone number (Country code + Area code + Number)
-whatsapp.destinatario=5585999999999
-
-# --- REPORT STORAGE & RETENTION ---
-app.reports.output-directory=relatorios
-app.reports.retention-days=30
+```bash
+cp .env.example .env
+# edit .env with your real credentials and export them in the shell or process environment
 ```
+
+| Variable | Description | Example |
+|---|---|---|
+| `CHURCH_CLIENT_CODE` | Church platform client code | `19700` |
+| `CHURCH_USERNAME` | Church username | `your_username` |
+| `CHURCH_PASSWORD` | Church password | `your_password` |
+| `EVOLUTION_API_KEY` | Evolution API key (`apikey` header) | `secret_key` |
+| `WHATSAPP_BASE_URL` | Evolution API base URL (optional) | `http://localhost:8081` |
+| `WHATSAPP_INSTANCE` | Instance name (optional) | `igreja` |
+| `WHATSAPP_DESTINATARIO` | Recipient (country+area+number) | `5585999999999` |
+
+> 🔐 **Important:** if you previously had credentials in `application.properties`, **rotate the Church password and the Evolution API key** — they may exist in the Git history. The `.env` file is already in `.gitignore` and must never be committed.
+
+Other optional settings (with defaults in `application.properties`): report folder/retention, scraper URLs, timings and Resilience4j parameters (login attempts and backoff).
 
 #### 3. Build & Run
 
@@ -196,16 +197,40 @@ Upon completion, the PDF file `relatorios/relatorio_aniversariantes_YYYY-MM-DD.p
 
 ### 🧪 Running Automated Tests
 
-Run unit and integration test suite via Maven:
+Run the unit and integration test suite via Maven (Docker is required for integration tests):
 
 ```bash
 mvn test
 ```
 
-Unit tests cover:
+Tests cover:
 * Multi-month week boundary logic & chronological sorting (`RelatorioSemanalServiceTest`)
 * Execution tracker status transitions and JSON payload generation (`RelatorioExecucaoTrackerServiceTest`)
-* REST API endpoints with MockMvc (`RelatorioAniversariantesControllerTest`)
+* REST API endpoints with MockMvc, including the 409 concurrent-run guard (`RelatorioAniversariantesControllerTest`)
+* Orchestration: WhatsApp failure alerts, metrics and concurrency guard (`RelatorioAniversariantesServiceTest`)
+* **Real integration (Testcontainers + WireMock + headless Chrome):** full extraction against Church platform HTML fixtures, including pagination and congregation grouping (`WebScraperServiceIntegrationTest`)
+* **Login resilience:** first attempt returns 500 and the Resilience4j retry recovers the flow (`WebScraperLoginRetryIntegrationTest`)
+* **WhatsApp delivery:** payload, `apikey` header and 5xx error handling (`WhatsAppServiceIntegrationTest`)
+
+---
+
+### 🛡️ Resilience & Alerts
+
+* **Login retry (Resilience4j):** up to 3 attempts with exponential backoff (2s → 4s → 8s), configurable via `resilience4j.retry.instances.login.*`.
+* **WhatsApp delivery retry:** 2 attempts before propagating `WhatsAppException`, configurable via `resilience4j.retry.instances.whatsapp.*`.
+* **Automatic failure alerts:** if report generation fails, the admin receives a WhatsApp text message with the time, error and guidance — independent of the missing PDF.
+* **Concurrency guard:** a second trigger during a running execution returns HTTP `409 Conflict`; a scheduled run colliding with a manual one is skipped with a warning log.
+
+---
+
+### 📈 Observability
+
+* **Actuator:** `GET /actuator/health`, `/actuator/info`, `/actuator/metrics` and `/actuator/prometheus` (default exposure in `application.properties`).
+* **Custom metrics (Micrometer):**
+  * `relatorio.geracao.execucoes` (counter, tag `outcome=sucesso|erro`)
+  * `relatorio.geracao.tempo` (timer for each run duration)
+  * `relatorio.whatsapp.envio` (counter, tag `outcome=sucesso|erro`)
+* **Structured logging:** SLF4J with a rich date/level/thread pattern (`logback-spring.xml`); the `dev` profile raises the level to DEBUG.
 
 ---
 

@@ -1,0 +1,12 @@
+{
+  "scenarioName": "loginRetry",
+  "requiredScenarioState": "Started",
+  "newScenarioState": "SEGUNDA_TENTATIVA",
+  "request": {
+    "method": "GET",
+    "urlPath": "/frmlogin/"
+  },
+  "response": {
+    "status": 500
+  }
+}

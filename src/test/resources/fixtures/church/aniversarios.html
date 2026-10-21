@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Aniversariantes (fixture de teste)</title>
+</head>
+<body>
+<h1>Aniversariantes</h1>
+
+<label for="id_sc_field_tipo">Tipo</label>
+<select id="id_sc_field_tipo">
+    <option value="">Selecione</option>
+    <option value="1">Membros</option>
+    <option value="2">Congregados</option>
+</select>
+<button type="button" id="sc_OK_bot">OK</button>
+
+<label for="id_sc_field_setor">Regionais</label>
+<select id="id_sc_field_setor" multiple="multiple">
+    <option value="">Selecione</option>
+    <option value="1">Sede</option>
+    <option value="2">Regional 1</option>
+</select>
+
+<label for="id_sc_field_congregacao">Congregações</label>
+<select id="id_sc_field_congregacao" multiple="multiple">
+    <option value="">Selecione</option>
+    <option value="1">Centro</option>
+    <option value="2">Norte</option>
+</select>
+
+<label for="id_sc_field_dia1">Dia inicial</label>
+<input type="text" id="id_sc_field_dia1"/>
+<label for="id_sc_field_dia2">Dia final</label>
+<input type="text" id="id_sc_field_dia2"/>
+
+<label for="id_sc_field_mes">Mês</label>
+<select id="id_sc_field_mes">
+    <option value="1">Janeiro</option>
+    <option value="2">Fevereiro</option>
+    <option value="3">Março</option>
+    <option value="4">Abril</option>
+    <option value="5">Maio</option>
+    <option value="6">Junho</option>
+    <option value="7">Julho</option>
+    <option value="8">Agosto</option>
+    <option value="9">Setembro</option>
+    <option value="10">Outubro</option>
+    <option value="11">Novembro</option>
+    <option value="12">Dezembro</option>
+</select>
+
+<label for="id_sc_field_situacao">Situação</label>
+<select id="id_sc_field_situacao">
+    <option value="">Selecione</option>
+    <option value="1">Ativo</option>
+</select>
+
+<button type="button" id="sub_form_b">Pesquisar</button>
+
+<div id="resultado">
+    <table>
+        <tbody id="corpo-resultados">
+            <tr class="scGridFieldOdd">
+                <td><input type="checkbox"/></td>
+                <td>12/10</td>
+                <td>Maria Silva</td>
+                <td>35 anos</td>
+                <td>&nbsp;</td>
+                <td>Centro</td>
+            </tr>
+            <tr class="scGridFieldEven">
+                <td><input type="checkbox"/></td>
+                <td>13/10</td>
+                <td>João Souza</td>
+                <td>28 anos</td>
+                <td>&nbsp;</td>
+                <td>Norte</td>
+            </tr>
+        </tbody>
+    </table>
+    <button type="button" id="forward_1" title="Próxima página" onclick="mostrarPagina2()">Próxima</button>
+</div>
+
+<script>
+    var pagina2 = '<tr class="scGridFieldOdd">'
+        + '<td><input type="checkbox"/></td>'
+        + '<td>14/10</td>'
+        + '<td>Ana Clara</td>'
+        + '<td>42 anos</td>'
+        + '<td>&nbsp;</td>'
+        + '<td>Sede</td>'
+        + '</tr>';
+
+    function mostrarPagina2() {
+        document.getElementById('corpo-resultados').innerHTML = pagina2;
+        document.getElementById('forward_1').style.display = 'none';
+    }
+</script>
+</body>
+</html>
